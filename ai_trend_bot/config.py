@@ -66,7 +66,7 @@ class DeliveryConfig(BaseModel):
 
     timezone: str = "Asia/Seoul"
     send_times: tuple[time, ...]
-    daily_max: int = Field(default=20, ge=1, le=20)
+    daily_max: int = Field(default=45, ge=1, le=60)
     run_limits: tuple[int, ...]
 
     @model_validator(mode="after")

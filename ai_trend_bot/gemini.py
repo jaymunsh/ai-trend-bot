@@ -70,7 +70,6 @@ def parse_summary(payload: str, raw_items: Sequence[RawItem]) -> tuple[DigestIte
             source_label=raw.source,
         )
         for index, raw in enumerate(raw_items)
-        if by_index[index].relevance >= 60
     )
 
 
@@ -89,7 +88,7 @@ class GeminiClient:
         prompt = (
             "다음 AI 관련 항목을 한국어로 번역·요약하세요. 과장 없이 핵심 사실과 의미를 2~3문장으로 쓰고, "
             "제목은 간결하게 작성하세요. AI 기술·모델·제품·연구·산업에 미치는 중요도를 relevance 0~100으로 "
-            "평가하세요. 단순 홍보, 채용, 행사, 일반 기업 소식은 낮게 평가하세요. 입력의 index를 그대로 유지하고 "
+            "평가하되 이는 참고값일 뿐이므로 모든 입력 항목을 빠짐없이 반환하세요. 입력의 index를 그대로 유지하고 "
             "JSON만 반환하세요.\n"
             f"입력: {json.dumps(input_items, ensure_ascii=False)}"
         )

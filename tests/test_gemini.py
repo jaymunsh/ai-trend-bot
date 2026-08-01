@@ -29,7 +29,7 @@ def test_parse_summary_when_response_matches_items() -> None:
     assert digest[0].source_label == "Example"
 
 
-def test_parse_summary_when_relevance_is_low() -> None:
+def test_parse_summary_keeps_low_relevance_items() -> None:
     # Given
     raw_items = (
         RawItem(
@@ -48,4 +48,5 @@ def test_parse_summary_when_relevance_is_low() -> None:
     digest = parse_summary(payload, raw_items)
 
     # Then
-    assert digest == ()
+    assert len(digest) == 1
+    assert digest[0].title == "사내 행사"

@@ -64,7 +64,7 @@ def check_config(
 @app.command("run")
 def run_digest(
     config: Annotated[Path, typer.Option("--config", exists=True, dir_okay=False)] = DEFAULT_CONFIG_PATH,
-    limit: Annotated[int, typer.Option("--limit", min=1, max=20)] = 6,
+    limit: Annotated[int, typer.Option("--limit", min=1, max=20)] = 15,
     dry_run: Annotated[bool, typer.Option("--dry-run/--send")] = True,
 ) -> None:
     """Collect, summarize, and optionally send one digest run."""

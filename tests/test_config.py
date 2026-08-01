@@ -9,8 +9,8 @@ VALID_CONFIG = """
 [delivery]
 timezone = "Asia/Seoul"
 send_times = ["08:17", "14:17", "20:17"]
-daily_max = 20
-run_limits = [8, 6, 6]
+daily_max = 45
+run_limits = [15, 15, 15]
 
 [threads]
 enabled = false
@@ -38,8 +38,8 @@ def test_load_app_config_when_file_is_valid(tmp_path: Path) -> None:
     config = load_app_config(config_path)
 
     # Then
-    assert config.delivery.daily_max == 20
-    assert config.delivery.run_limits == (8, 6, 6)
+    assert config.delivery.daily_max == 45
+    assert config.delivery.run_limits == (15, 15, 15)
     assert config.threads.watch_accounts[0].username == "example"
     assert config.threads.enabled is False
 
@@ -47,7 +47,7 @@ def test_load_app_config_when_file_is_valid(tmp_path: Path) -> None:
 def test_load_app_config_when_daily_limit_exceeds_cap(tmp_path: Path) -> None:
     # Given
     config_path = tmp_path / "sources.toml"
-    config_path.write_text(VALID_CONFIG.replace("daily_max = 20", "daily_max = 21"), encoding="utf-8")
+    config_path.write_text(VALID_CONFIG.replace("daily_max = 45", "daily_max = 61"), encoding="utf-8")
 
     # When / Then
     with pytest.raises(ValidationError):
