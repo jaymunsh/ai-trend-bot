@@ -1,0 +1,77 @@
+[project]
+name = "ai-trend-bot"
+version = "0.1.0"
+description = "RSS와 Threads의 AI 트렌드를 한국어로 요약해 보내는 텔레그램 봇"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "anyio>=4.14.2",
+    "feedparser>=6.0.14",
+    "httpx2[brotli,http2,zstd]>=2.9.1",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.10",
+    "rich>=14",
+    "typer>=0.16",
+]
+
+[project.scripts]
+ai-trend-bot = "ai_trend_bot.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.21",
+    "ruff>=0.8",
+    "pytest>=8",
+    "pytest-cov>=5",
+]
+
+[tool.basedpyright]
+typeCheckingMode = "all"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownLambdaType = false
+reportUnknownParameterType = false
+reportMissingParameterType = false
+reportUnnecessaryIsInstance = false
+reportUnusedCallResult = false
+reportImplicitOverride = false
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",   # trailing comma (conflicts with formatter)
+    "ISC001",   # single-line string concat (conflicts with formatter)
+    "D1",       # undocumented-public-* (too noisy early on)
+    "ANN101",   # deprecated: self annotation
+    "ANN102",   # deprecated: cls annotation
+    "S101",     # assert used (pytest needs it)
+    "PLR2004",  # magic-value-comparison (test data)
+    "FBT",      # boolean-trap (too strict for CLIs)
+    "TD",       # flake8-todos (noisy)
+    "FIX",      # fixme (noisy)
+    "CPY001",   # personal project does not carry per-file copyright headers
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "PLR2004", "SLF001", "D", "ARG", "ANN"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"

@@ -1,0 +1,48 @@
+name: AI trend digest
+
+on:
+  schedule:
+    - cron: "17 23 * * *"
+    - cron: "17 5 * * *"
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-trend-digest
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: .data/seen.sqlite3
+          key: seen-${{ github.run_id }}
+          restore-keys: seen-
+      - run: uv sync --frozen
+      - name: Send digest
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [[ "$SCHEDULE" == "17 23 * * *" ]]; then
+            limit=8
+          else
+            limit=6
+          fi
+          uv run ai-trend-bot run --send --limit "$limit"
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .data/seen.sqlite3
+          key: seen-${{ github.run_id }}

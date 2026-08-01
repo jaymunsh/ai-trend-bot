@@ -1,0 +1,62 @@
+[delivery]
+timezone = "Asia/Seoul"
+send_times = ["08:17", "14:17", "20:17"]
+daily_max = 20
+run_limits = [8, 6, 6]
+
+[threads]
+enabled = false
+keywords = ["AI agent", "LLM", "OpenAI", "Claude", "Gemini"]
+keyword_daily_max = 4
+
+[[threads.watch_accounts]]
+username = "choi.openai"
+priority = 100
+collect_replies = true
+
+# 관심 계정을 추가할 때 아래 블록을 복사하세요.
+# username에는 사용자명, @사용자명, 프로필 URL을 모두 사용할 수 있습니다.
+# [[threads.watch_accounts]]
+# username = "https://www.threads.net/@example"
+# priority = 100
+# collect_replies = false
+
+[[feeds]]
+name = "OpenAI News"
+url = "https://openai.com/news/rss.xml"
+category = "official"
+
+[[feeds]]
+name = "Google DeepMind"
+url = "https://deepmind.google/blog/rss.xml"
+category = "official"
+
+[[feeds]]
+name = "Google AI"
+url = "https://blog.google/technology/ai/rss/"
+category = "official"
+
+[[feeds]]
+name = "NVIDIA Generative AI"
+url = "https://blogs.nvidia.com/blog/category/generative-ai/feed/"
+category = "official"
+
+[[feeds]]
+name = "AWS Machine Learning"
+url = "https://aws.amazon.com/blogs/machine-learning/feed/"
+category = "official"
+
+[[feeds]]
+name = "GitHub AI & ML"
+url = "https://github.blog/ai-and-ml/feed/"
+category = "official"
+
+[[feeds]]
+name = "Hugging Face Blog"
+url = "https://huggingface.co/blog/feed.xml"
+category = "community"
+
+[[feeds]]
+name = "arXiv Artificial Intelligence"
+url = "https://export.arxiv.org/rss/cs.AI"
+category = "research"

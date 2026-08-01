@@ -1,0 +1,1 @@
+"""AI trend digest bot."""
