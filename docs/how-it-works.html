@@ -1,0 +1,1505 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="AI 트렌드 봇의 현재 구현, 자동화 흐름, 수집처, 운영 일정과 Threads 보류 상태를 설명하는 프로젝트 개요 문서"
+    />
+    <meta name="theme-color" content="#F7F6F3" />
+    <title>AI 트렌드 봇 · 구현 및 운영 개요</title>
+    <style>
+      :root {
+        --surface-canvas: #f7f6f3;
+        --surface-primary: #fffefc;
+        --surface-secondary: #f1f0ec;
+        --text-primary: #242628;
+        --text-secondary: #656965;
+        --text-tertiary: #5f635e;
+        --border-default: #d9d9d3;
+        --border-subtle: #e9e8e3;
+        --accent-primary: #1459c7;
+        --accent-hover: #0c439a;
+        --accent-soft: #eaf1fd;
+        --status-success: #246b45;
+        --status-success-soft: #e8f3ec;
+        --status-warning: #9b5d12;
+        --status-warning-soft: #fbf0dd;
+        --status-error: #a63a32;
+        --status-error-soft: #f9e9e7;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 40px;
+        --space-12: 48px;
+        --space-16: 64px;
+        --space-20: 80px;
+        --space-24: 96px;
+        --font-sans:
+          ui-sans-serif, -apple-system, BlinkMacSystemFont,
+          "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        --font-serif: "Iowan Old Style", "Noto Serif KR", Georgia, serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        color-scheme: light;
+        background: var(--surface-canvas);
+      }
+      body {
+        margin: 0;
+        color: var(--text-primary);
+        background: var(--surface-canvas);
+        font: 16px/1.7 var(--font-sans);
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+      a {
+        color: var(--accent-primary);
+        text-underline-offset: 3px;
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+      button,
+      a {
+        touch-action: manipulation;
+      }
+      .skip-link {
+        position: fixed;
+        z-index: 10;
+        top: var(--space-3);
+        left: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        border: 1px solid var(--accent-primary);
+        border-radius: 4px;
+        background: var(--surface-primary);
+        color: var(--accent-primary);
+        font-weight: 700;
+        transform: translateY(-160%);
+      }
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+      .page {
+        display: grid;
+        grid-template-columns: 248px minmax(0, 1fr);
+        width: min(1440px, 100%);
+        min-height: 100dvh;
+        margin: auto;
+        border-inline: 1px solid var(--border-default);
+        background: var(--surface-primary);
+      }
+      .rail {
+        position: sticky;
+        top: 0;
+        display: flex;
+        height: 100dvh;
+        flex-direction: column;
+        padding: var(--space-8) var(--space-6);
+        border-right: 1px solid var(--border-default);
+        background: var(--surface-canvas);
+        overflow: auto;
+      }
+      .brand {
+        padding-bottom: var(--space-8);
+        border-bottom: 1px solid var(--border-default);
+      }
+      .brand strong {
+        display: block;
+        font-size: 1.125rem;
+        letter-spacing: -0.01em;
+      }
+      .brand span {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+      }
+      .rail-label {
+        margin: var(--space-8) 0 var(--space-2);
+        color: var(--text-tertiary);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .toc {
+        display: grid;
+        gap: var(--space-1);
+      }
+      .toc a {
+        display: flex;
+        min-height: 44px;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-2) var(--space-3);
+        border-left: 2px solid transparent;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        text-decoration: none;
+      }
+      .toc a span {
+        min-width: 22px;
+        color: var(--text-tertiary);
+        font: 600 0.75rem/1 var(--font-mono);
+      }
+      .toc a:hover,
+      .toc a[aria-current="true"] {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+        background: var(--accent-soft);
+      }
+      .toc a[aria-current="true"] span {
+        color: var(--accent-primary);
+      }
+      .rail-note {
+        margin-top: auto;
+        padding-top: var(--space-8);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+      }
+      .rail-note strong {
+        display: block;
+        color: var(--text-primary);
+        font-size: 0.75rem;
+      }
+      .content {
+        min-width: 0;
+      }
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
+        gap: var(--space-12);
+        padding: var(--space-20) clamp(var(--space-6), 5vw, var(--space-16))
+          var(--space-16);
+        border-bottom: 1px solid var(--border-default);
+      }
+      .hero-copy {
+        min-width: 0;
+      }
+      .overline {
+        margin: 0 0 var(--space-4);
+        color: var(--accent-primary);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .hero h1 {
+        max-width: 11ch;
+        margin: 0;
+        font: 700 clamp(2.75rem, 7vw, 5.25rem)/1.02 var(--font-serif);
+        letter-spacing: -0.045em;
+      }
+      .hero-side {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: var(--space-6);
+      }
+      .lede {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 1.125rem;
+        line-height: 1.7;
+      }
+      .status-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
+      .badge {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-3);
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .badge::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        content: "";
+      }
+      .badge.success {
+        color: var(--status-success);
+        background: var(--status-success-soft);
+      }
+      .badge.success::before {
+        background: var(--status-success);
+      }
+      .badge.warning {
+        color: var(--status-warning);
+        background: var(--status-warning-soft);
+      }
+      .badge.warning::before {
+        background: var(--status-warning);
+      }
+      .badge.neutral {
+        color: var(--text-secondary);
+        background: var(--surface-secondary);
+      }
+      .badge.neutral::before {
+        background: var(--text-tertiary);
+      }
+      .print-button {
+        align-self: flex-start;
+        min-height: 44px;
+        padding: 0 var(--space-4);
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: var(--surface-primary);
+        color: var(--text-primary);
+        font: 700 0.875rem var(--font-sans);
+        cursor: pointer;
+      }
+      .print-button:hover {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+      }
+      .print-button:active {
+        transform: translateY(1px);
+      }
+      :focus-visible {
+        outline: 3px solid var(--accent-primary);
+        outline-offset: 2px;
+      }
+      .section {
+        padding: var(--space-16) clamp(var(--space-6), 5vw, var(--space-16));
+        border-bottom: 1px solid var(--border-default);
+        scroll-margin-top: var(--space-6);
+      }
+      .section-heading {
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: var(--space-4);
+        margin-bottom: var(--space-10);
+      }
+      .section-index {
+        padding-top: var(--space-2);
+        color: var(--accent-primary);
+        font: 700 0.875rem/1 var(--font-mono);
+      }
+      .section-title h2 {
+        margin: 0;
+        font-size: 2rem;
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+      }
+      .section-title p {
+        max-width: 68ch;
+        margin: var(--space-3) 0 0;
+        color: var(--text-secondary);
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .metric {
+        min-height: 138px;
+        padding: var(--space-5);
+        background: var(--surface-primary);
+      }
+      .metric + .metric {
+        border-left: 1px solid var(--border-default);
+      }
+      .metric-label {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .metric-value {
+        display: block;
+        margin: var(--space-2) 0;
+        font: 700 2rem/1.15 var(--font-serif);
+        font-variant-numeric: tabular-nums;
+      }
+      .metric small {
+        display: block;
+        color: var(--text-tertiary);
+        font-size: 0.75rem;
+      }
+      .fact-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+        margin-top: var(--space-6);
+      }
+      .fact {
+        padding: var(--space-6);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-primary);
+      }
+      .fact h3 {
+        margin: 0 0 var(--space-3);
+        font-size: 1.125rem;
+        line-height: 1.4;
+      }
+      .fact p {
+        margin: 0;
+        color: var(--text-secondary);
+      }
+      .fact ul {
+        margin: var(--space-3) 0 0;
+        padding-left: 1.25rem;
+        color: var(--text-secondary);
+      }
+      .diagram {
+        margin: 0 0 var(--space-6);
+        padding: var(--space-6);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-primary);
+        overflow: hidden;
+      }
+      .diagram h3 {
+        margin: 0 0 var(--space-5);
+        font-size: 1.125rem;
+      }
+      .diagram .mermaid {
+        min-width: 0;
+        overflow: auto;
+      }
+      .diagram figcaption {
+        margin-top: var(--space-5);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+      .diagram-fallback {
+        margin: var(--space-4) 0 0;
+        padding: var(--space-4);
+        border-left: 3px solid var(--accent-primary);
+        background: var(--accent-soft);
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border-top: 1px solid var(--text-primary);
+      }
+      .timeline li {
+        position: relative;
+        padding: var(--space-6) var(--space-4) 0;
+      }
+      .timeline li::before {
+        position: absolute;
+        top: -7px;
+        left: var(--space-4);
+        width: 11px;
+        height: 11px;
+        border: 2px solid var(--accent-primary);
+        border-radius: 50%;
+        background: var(--surface-primary);
+        content: "";
+      }
+      .timeline time {
+        display: block;
+        color: var(--accent-primary);
+        font: 700 1rem/1.4 var(--font-mono);
+      }
+      .timeline strong {
+        display: block;
+        margin: var(--space-2) 0;
+      }
+      .timeline span {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+      .callout {
+        margin-top: var(--space-6);
+        padding: var(--space-5);
+        border-left: 3px solid;
+        background: var(--surface-secondary);
+      }
+      .callout h3 {
+        margin: 0 0 var(--space-2);
+        font-size: 1rem;
+      }
+      .callout p {
+        margin: 0;
+        color: var(--text-secondary);
+      }
+      .callout.info {
+        border-color: var(--accent-primary);
+        background: var(--accent-soft);
+      }
+      .callout.success {
+        border-color: var(--status-success);
+        background: var(--status-success-soft);
+      }
+      .callout.warning {
+        border-color: var(--status-warning);
+        background: var(--status-warning-soft);
+      }
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-primary);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 720px;
+      }
+      caption {
+        padding: var(--space-4) var(--space-5);
+        text-align: left;
+        font-weight: 700;
+      }
+      th,
+      td {
+        padding: var(--space-3) var(--space-4);
+        border-top: 1px solid var(--border-subtle);
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.875rem;
+      }
+      th {
+        color: var(--text-secondary);
+        background: var(--surface-secondary);
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+      }
+      td code {
+        font: 600 0.8125rem var(--font-mono);
+      }
+      .priority {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+      .source-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-3);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .source-list li {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        gap: var(--space-3);
+        align-items: center;
+        padding: var(--space-4);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+      }
+      .source-number {
+        color: var(--text-tertiary);
+        font: 600 0.75rem var(--font-mono);
+      }
+      .source-name {
+        font-weight: 700;
+      }
+      .source-type {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+      }
+      .checklist {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-3);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .checklist li {
+        position: relative;
+        padding: var(--space-4) var(--space-4) var(--space-4) var(--space-10);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+      }
+      .checklist li::before {
+        position: absolute;
+        left: var(--space-4);
+        top: var(--space-4);
+        display: grid;
+        width: 20px;
+        height: 20px;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--status-success);
+        background: var(--status-success-soft);
+        font-size: 0.75rem;
+        font-weight: 800;
+        content: "✓";
+      }
+      .checklist strong {
+        display: block;
+        font-size: 0.875rem;
+      }
+      .checklist span {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+      }
+      .code-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+      }
+      .code-block {
+        min-width: 0;
+      }
+      .code-block h3 {
+        margin: 0 0 var(--space-3);
+        font-size: 1rem;
+      }
+      .code-block pre {
+        margin: 0;
+        padding: var(--space-5);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-secondary);
+        overflow: auto;
+      }
+      .code-block code {
+        font: 400 0.8125rem/1.7 var(--font-mono);
+        white-space: pre;
+      }
+      .repo-tree {
+        margin: 0;
+        padding: var(--space-5);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-secondary);
+        overflow: auto;
+        font: 400 0.8125rem/1.75 var(--font-mono);
+        white-space: pre;
+      }
+      .risk-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+      }
+      details {
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-primary);
+      }
+      summary {
+        min-height: 52px;
+        padding: var(--space-3) var(--space-4);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      details p {
+        margin: 0;
+        padding: 0 var(--space-4) var(--space-4);
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+      .footer {
+        padding: var(--space-12) clamp(var(--space-6), 5vw, var(--space-16));
+        background: var(--surface-canvas);
+      }
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-6);
+        align-items: flex-end;
+      }
+      .footer p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+      .footer a {
+        font-weight: 700;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 1024px) {
+        .page {
+          display: block;
+          border: 0;
+        }
+        .rail {
+          position: sticky;
+          z-index: 5;
+          top: 0;
+          height: auto;
+          padding: var(--space-3) var(--space-4);
+          border-right: 0;
+          border-bottom: 1px solid var(--border-default);
+          overflow: hidden;
+        }
+        .brand,
+        .rail-label,
+        .rail-note {
+          display: none;
+        }
+        .toc {
+          display: flex;
+          gap: var(--space-1);
+          overflow: auto;
+          scrollbar-width: thin;
+        }
+        .toc a {
+          flex: 0 0 auto;
+          border-left: 0;
+          border-bottom: 2px solid transparent;
+        }
+        .hero {
+          padding-top: var(--space-16);
+        }
+      }
+      @media (max-width: 768px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: var(--space-8);
+        }
+        .hero h1 {
+          max-width: 13ch;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .metric:nth-child(3) {
+          border-left: 0;
+          border-top: 1px solid var(--border-default);
+        }
+        .metric:nth-child(4) {
+          border-top: 1px solid var(--border-default);
+        }
+        .fact-grid,
+        .source-list,
+        .checklist,
+        .code-grid,
+        .risk-grid {
+          grid-template-columns: 1fr;
+        }
+        .section-heading {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+        .footer-inner {
+          display: grid;
+        }
+      }
+      @media (max-width: 640px) {
+        body {
+          font-size: 16px;
+        }
+        .hero,
+        .section,
+        .footer {
+          padding-inline: var(--space-5);
+        }
+        .hero {
+          padding-top: var(--space-12);
+          padding-bottom: var(--space-12);
+        }
+        .hero h1 {
+          font-size: clamp(2.75rem, 15vw, 4rem);
+        }
+        .section {
+          padding-top: var(--space-12);
+          padding-bottom: var(--space-12);
+        }
+        .section-heading {
+          display: block;
+        }
+        .section-index {
+          margin-bottom: var(--space-3);
+        }
+        .section-title h2 {
+          font-size: 1.5rem;
+        }
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+        .metric {
+          min-height: 0;
+        }
+        .metric + .metric,
+        .metric:nth-child(3),
+        .metric:nth-child(4) {
+          border-left: 0;
+          border-top: 1px solid var(--border-default);
+        }
+        .timeline {
+          grid-template-columns: 1fr;
+          border-top: 0;
+          border-left: 1px solid var(--text-primary);
+        }
+        .timeline li {
+          padding: 0 0 var(--space-6) var(--space-6);
+        }
+        .timeline li::before {
+          top: 6px;
+          left: -7px;
+        }
+        .source-list li {
+          grid-template-columns: 30px minmax(0, 1fr);
+        }
+        .source-type {
+          grid-column: 2;
+        }
+        .diagram {
+          padding: var(--space-4);
+        }
+        .footer {
+          padding-bottom: var(--space-16);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        * {
+          transition: none !important;
+        }
+      }
+      .space-top-4 {
+        margin-top: var(--space-4);
+      }
+      .space-top-6 {
+        margin-top: var(--space-6);
+      }
+      .space-top-8 {
+        margin-top: var(--space-8);
+        margin-bottom: var(--space-3);
+      }
+      @media print {
+        .rail,
+        .print-button,
+        .skip-link {
+          display: none;
+        }
+        .page {
+          display: block;
+          width: 100%;
+          border: 0;
+        }
+        .hero,
+        .section,
+        .footer {
+          padding: 28px 32px;
+        }
+        .section {
+          break-inside: auto;
+        }
+        .diagram,
+        .table-wrap,
+        .fact,
+        .callout {
+          break-inside: avoid;
+        }
+        details > :not(summary) {
+          display: block !important;
+        }
+        a {
+          color: var(--text-primary);
+          text-decoration: none;
+        }
+        .mermaid {
+          max-height: none;
+        }
+        .footer {
+          border-top: 1px solid var(--border-default);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+    <div class="page">
+      <aside class="rail" aria-label="문서 목차">
+        <div class="brand">
+          <strong>AI 트렌드 봇</strong><span>구현 및 운영 개요 · v0.1</span>
+        </div>
+        <p class="rail-label">Contents</p>
+        <nav class="toc">
+          <a href="#overview" aria-current="true"><span>01</span>현재 상태</a>
+          <a href="#architecture"><span>02</span>처리 구조</a>
+          <a href="#schedule"><span>03</span>운영 일정</a>
+          <a href="#sources"><span>04</span>정보 출처</a>
+          <a href="#quality"><span>05</span>선별·출력</a>
+          <a href="#security"><span>06</span>보안·배포</a>
+          <a href="#threads"><span>07</span>Threads</a>
+          <a href="#operation"><span>08</span>운영 방법</a>
+          <a href="#risks"><span>09</span>제약·다음 단계</a>
+        </nav>
+        <div class="rail-note">
+          <strong>기준 시각</strong>Asia/Seoul · 저장소 구현 기준
+        </div>
+      </aside>
+
+      <main id="main" class="content">
+        <header class="hero">
+          <div class="hero-copy">
+            <p class="overline">Project operating brief</p>
+            <h1>AI 정보를 골라, 한국어로 전달합니다.</h1>
+          </div>
+          <div class="hero-side">
+            <p class="lede">
+              8개 RSS에서 새 소식을 모으고, Gemini가 한국어로 요약한 뒤 회차당
+              최대 15건을 텔레그램으로 하루 세 번 전달하는 개인용 자동화입니다.
+            </p>
+            <div class="status-line">
+              <span class="badge success">RSS 운영 중</span
+              ><span class="badge warning">Threads 보류</span
+              ><span class="badge neutral">GitHub Actions</span>
+            </div>
+            <button class="print-button" type="button" data-print>
+              인쇄 또는 PDF 저장
+            </button>
+          </div>
+        </header>
+
+        <section id="overview" class="section" aria-labelledby="overview-title">
+          <div class="section-heading">
+            <span class="section-index">01</span>
+            <div class="section-title">
+              <h2 id="overview-title">현재 구현 상태</h2>
+              <p>
+                수집부터 중복 제거, AI 요약, 텔레그램 발송, 예약 실행까지 한
+                사이클이 완성되어 있습니다.
+              </p>
+            </div>
+          </div>
+          <div class="metrics">
+            <article class="metric">
+              <span class="metric-label">활성 수집처</span
+              ><strong class="metric-value">8개</strong
+              ><small>공식 6 · 연구 1 · 커뮤니티 1</small>
+            </article>
+            <article class="metric">
+              <span class="metric-label">하루 실행</span
+              ><strong class="metric-value">3회</strong
+              ><small>08:17 · 14:17 · 20:17 KST</small>
+            </article>
+            <article class="metric">
+              <span class="metric-label">하루 상한</span
+              ><strong class="metric-value">45건</strong
+              ><small>회차별 최대 15 · 15 · 15건</small>
+            </article>
+            <article class="metric">
+              <span class="metric-label">발송 기준</span
+              ><strong class="metric-value">새 항목</strong
+              ><small>관련도 점수와 관계없이 발송</small>
+            </article>
+          </div>
+          <div class="fact-grid">
+            <article class="fact">
+              <h3>완성된 기능</h3>
+              <ul>
+                <li>RSS 수집과 출처별 우선순위</li>
+                <li>URL 해시 기반 중복 제거</li>
+                <li>Gemini 한국어 번역·2~3문장 요약</li>
+                <li>텔레그램 메시지 묶음 발송</li>
+                <li>GitHub Actions 예약 실행과 캐시</li>
+              </ul>
+            </article>
+            <article class="fact">
+              <h3>현재 운영 모드</h3>
+              <p>
+                실제 자동 실행은 RSS 뉴스 중심입니다. Threads 수집 코드는 계정
+                피드, 자기 답글 결합, 키워드 검색까지 구현되어 있지만 Meta 권한
+                검수 전까지 설정에서 꺼져 있습니다.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section
+          id="architecture"
+          class="section"
+          aria-labelledby="architecture-title"
+        >
+          <div class="section-heading">
+            <span class="section-index">02</span>
+            <div class="section-title">
+              <h2 id="architecture-title">처리 구조</h2>
+              <p>
+                각 단계가 실패 범위를 좁게 유지하도록 분리되어 있으며, 한 출처가
+                실패해도 가능한 나머지 출처는 계속 처리합니다.
+              </p>
+            </div>
+          </div>
+          <figure class="diagram">
+            <h3>전체 아키텍처</h3>
+            <pre class="mermaid">
+flowchart LR
+  subgraph Input[수집]
+    RSS[8개 RSS 피드]
+    TH[Threads 계정·키워드\n현재 비활성]
+  end
+  subgraph Core[선별과 가공]
+    FETCH[Feed / Threads Client]
+    DEDUPE[URL 해시 중복 제거\nSQLite]
+    SORT[출처 우선순위·시간 정렬]
+    AI[Gemini\n번역·요약]
+  end
+  subgraph Delivery[전달]
+    GROUP[3,800자 이하 묶음]
+    TG[Telegram Bot]
+  end
+  RSS --> FETCH
+  TH -. 권한 확보 후 .-> FETCH
+  FETCH --> DEDUPE --> SORT --> AI
+  AI -->|회차당 최대 15건| GROUP --> TG
+  AI -->|선택 후보 처리 기록| DEDUPE</pre>
+            <p class="diagram-fallback">
+              텍스트 요약: RSS와 선택적 Threads 입력을 수집하고, SQLite로 중복을
+              제거한 뒤 우선순위로 정렬합니다. 새 항목을 최대 15건까지 Gemini가
+              한국어로 요약하고, 텔레그램 제한에 맞춰 묶어서 보냅니다.
+            </p>
+            <figcaption>
+              데이터는
+              <strong
+                >수집 → 중복 제거 → 우선순위 정렬 → AI 요약 → 메시지 분할 →
+                발송</strong
+              >
+              순서로 흐릅니다.
+            </figcaption>
+          </figure>
+          <figure class="diagram">
+            <h3>한 번의 실행이 진행되는 순서</h3>
+            <pre class="mermaid">
+sequenceDiagram
+  participant GA as GitHub Actions
+  participant FE as RSS 출처
+  participant DB as SQLite 캐시
+  participant GM as Gemini
+  participant TG as Telegram
+  GA->>FE: 8개 피드 요청
+  FE-->>GA: 최신 원문 후보
+  GA->>DB: 이미 보낸 URL 확인
+  DB-->>GA: 미발송 후보
+  GA->>GM: 제목·본문·출처 전달
+  GM-->>GA: 한국어 제목·요약
+  GA->>TG: 새 항목 최대 15건 묶음 발송
+  TG-->>GA: 발송 대상이 있으면 완료
+  GA->>DB: 발송 후보 전체 URL 해시 기록
+  GA->>GA: 캐시 저장</pre>
+            <p class="diagram-fallback">
+              텍스트 요약: GitHub Actions가 피드를 읽고 캐시에서 미발송 항목만
+              골라 Gemini에 보냅니다. 요약된 결과는 모두 텔레그램으로 전달하고,
+              이번에 처리한 후보 전체의 URL을 캐시에 기록합니다.
+            </p>
+            <figcaption>
+              시험 실행은 실제 발송이나 중복 기록을 하지 않아 운영 데이터를
+              오염시키지 않습니다.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section id="schedule" class="section" aria-labelledby="schedule-title">
+          <div class="section-heading">
+            <span class="section-index">03</span>
+            <div class="section-title">
+              <h2 id="schedule-title">운영 일정</h2>
+              <p>
+                한국 시간 기준 하루 세 번 실행합니다. GitHub Actions의 UTC
+                cron은 각각 23:17, 05:17, 11:17로 저장되어 있습니다.
+              </p>
+            </div>
+          </div>
+          <ol class="timeline">
+            <li>
+              <time datetime="08:17">08:17</time
+              ><strong>아침 브리핑 · 최대 15건</strong
+              ><span
+                >밤사이 공식 발표와 연구 업데이트를 넉넉히 반영합니다.</span
+              >
+            </li>
+            <li>
+              <time datetime="14:17">14:17</time
+              ><strong>오후 브리핑 · 최대 15건</strong
+              ><span>오전 이후 추가된 새 소식을 보충합니다.</span>
+            </li>
+            <li>
+              <time datetime="20:17">20:17</time
+              ><strong>저녁 브리핑 · 최대 15건</strong
+              ><span>당일 마지막 업데이트를 전달합니다.</span>
+            </li>
+          </ol>
+          <div class="callout info" role="note">
+            <h3>왜 정각이 아니라 17분인가?</h3>
+            <p>
+              GitHub Actions 예약이 몰리는 정각을 피하기 위한 운영값입니다. 예약
+              실행은 플랫폼 상황에 따라 몇 분 지연될 수 있습니다.
+            </p>
+          </div>
+        </section>
+
+        <section id="sources" class="section" aria-labelledby="sources-title">
+          <div class="section-heading">
+            <span class="section-index">04</span>
+            <div class="section-title">
+              <h2 id="sources-title">정보 출처</h2>
+              <p>
+                현재는 공식 발표를 가장 우선하고, 연구와 커뮤니티를 보완재로
+                사용합니다.
+              </p>
+            </div>
+          </div>
+          <ul class="source-list">
+            <li>
+              <span class="source-number">01</span
+              ><span class="source-name">OpenAI News</span
+              ><span class="source-type">공식 · 80점</span>
+            </li>
+            <li>
+              <span class="source-number">02</span
+              ><span class="source-name">Google DeepMind</span
+              ><span class="source-type">공식 · 80점</span>
+            </li>
+            <li>
+              <span class="source-number">03</span
+              ><span class="source-name">Google AI</span
+              ><span class="source-type">공식 · 80점</span>
+            </li>
+            <li>
+              <span class="source-number">04</span
+              ><span class="source-name">NVIDIA Generative AI</span
+              ><span class="source-type">공식 · 80점</span>
+            </li>
+            <li>
+              <span class="source-number">05</span
+              ><span class="source-name">AWS Machine Learning</span
+              ><span class="source-type">공식 · 80점</span>
+            </li>
+            <li>
+              <span class="source-number">06</span
+              ><span class="source-name">GitHub AI &amp; ML</span
+              ><span class="source-type">공식 · 80점</span>
+            </li>
+            <li>
+              <span class="source-number">07</span
+              ><span class="source-name">Hugging Face Blog</span
+              ><span class="source-type">커뮤니티 · 20점</span>
+            </li>
+            <li>
+              <span class="source-number">08</span
+              ><span class="source-name">arXiv Artificial Intelligence</span
+              ><span class="source-type">연구 · 30점</span>
+            </li>
+          </ul>
+          <div class="table-wrap space-top-6">
+            <table>
+              <caption>
+                출처 우선순위 규칙
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">후보 유형</th>
+                  <th scope="col">우선순위</th>
+                  <th scope="col">현재 상태</th>
+                  <th scope="col">설명</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>지정 Threads 계정</td>
+                  <td class="priority">100</td>
+                  <td>비활성</td>
+                  <td><code>choi.openai</code> 게시물과 자기 답글</td>
+                </tr>
+                <tr>
+                  <td>공식 RSS</td>
+                  <td class="priority">80</td>
+                  <td>활성</td>
+                  <td>기업·프로젝트의 직접 발표</td>
+                </tr>
+                <tr>
+                  <td>Threads 키워드</td>
+                  <td class="priority">40</td>
+                  <td>비활성</td>
+                  <td>최근 게시물 중 키워드 기반 후보</td>
+                </tr>
+                <tr>
+                  <td>연구 RSS</td>
+                  <td class="priority">30</td>
+                  <td>활성</td>
+                  <td>arXiv cs.AI 연구 업데이트</td>
+                </tr>
+                <tr>
+                  <td>커뮤니티 RSS</td>
+                  <td class="priority">20</td>
+                  <td>활성</td>
+                  <td>Hugging Face 기술·생태계 소식</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="quality" class="section" aria-labelledby="quality-title">
+          <div class="section-heading">
+            <span class="section-index">05</span>
+            <div class="section-title">
+              <h2 id="quality-title">선별과 출력 품질</h2>
+              <p>
+                출처 우선순위는 후보 순서를 정합니다. 선택된 새 항목은 관련도
+                점수와 관계없이 모두 발송합니다.
+              </p>
+            </div>
+          </div>
+          <figure class="diagram">
+            <h3>항목 생명주기</h3>
+            <pre class="mermaid">
+stateDiagram-v2
+  [*] --> 수집후보
+  수집후보 --> 제외: URL 중복
+  수집후보 --> 요약대기: 새 항목
+  요약대기 --> 발송대기: 한국어 요약 완료
+  발송대기 --> 처리완료: Telegram 완료
+  처리완료 --> 중복기록
+  중복기록 --> [*]
+  제외 --> [*]</pre>
+            <p class="diagram-fallback">
+              텍스트 요약: 중복 URL은 제외하고 새 항목을 최대 15건까지 요약해
+              텔레그램으로 보냅니다. 발송 후보는 중복 기록에 저장합니다.
+            </p>
+            <figcaption>
+              관련도는 향후 정렬 개선을 위한 참고값으로만 유지하며 발송 항목을
+              삭제하는 기준으로 사용하지 않습니다.
+            </figcaption>
+          </figure>
+          <div class="fact-grid">
+            <article class="fact">
+              <h3>텔레그램 한 항목의 형식</h3>
+              <p>
+                <strong>1. 제목</strong><br />핵심 사실과 의미를 담은 한국어
+                2~3문장 요약<br />출처: 원문 제공처<br /><a
+                  href="https://example.com"
+                  >원문 링크</a
+                >
+              </p>
+            </article>
+            <article class="fact">
+              <h3>메시지 길이 처리</h3>
+              <p>
+                제목·요약·출처·URL을 묶어 보내되 한 메시지를 3,800자 이하로
+                유지합니다. 항목이 길면 여러 메시지로 안전하게 분할합니다.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section id="security" class="section" aria-labelledby="security-title">
+          <div class="section-heading">
+            <span class="section-index">06</span>
+            <div class="section-title">
+              <h2 id="security-title">보안과 배포</h2>
+              <p>
+                비밀값은 코드와 분리하고, GitHub Actions가 별도 서버 없이 예약
+                실행을 담당합니다.
+              </p>
+            </div>
+          </div>
+          <ul class="checklist">
+            <li>
+              <strong>로컬 키 분리</strong
+              ><span><code>.env</code>는 Git에서 제외</span>
+            </li>
+            <li>
+              <strong>Actions Secrets</strong
+              ><span>Telegram 토큰·채팅 ID·Gemini 키</span>
+            </li>
+            <li>
+              <strong>최소 권한</strong
+              ><span>워크플로의 저장소 권한은 읽기 전용</span>
+            </li>
+            <li>
+              <strong>중복 캐시</strong
+              ><span><code>.data/seen.sqlite3</code>만 Actions 캐시</span>
+            </li>
+            <li>
+              <strong>직렬 실행</strong
+              ><span>동일 브리핑의 중복 실행을 방지</span>
+            </li>
+            <li>
+              <strong>비공개 저장소</strong
+              ><span>개인 운영 설정 노출을 최소화</span>
+            </li>
+          </ul>
+          <figure class="diagram space-top-6">
+            <h3>배포 구조</h3>
+            <pre class="mermaid">
+flowchart TB
+  REPO[비공개 GitHub 저장소] --> ACTIONS[GitHub Actions\n하루 3회]
+  SECRETS[GitHub Actions Secrets\nTelegram · Gemini] --> ACTIONS
+  CACHE[Actions Cache\nseen.sqlite3] --> ACTIONS
+  ACTIONS --> CACHE
+  ACTIONS --> FEEDS[공개 RSS]
+  ACTIONS --> GEMINI[Gemini API]
+  ACTIONS --> TELEGRAM[개인 Telegram 채팅]</pre>
+            <p class="diagram-fallback">
+              텍스트 요약: 비공개 GitHub 저장소의 Actions가 Secrets를 받아 RSS와
+              Gemini를 호출하고 개인 텔레그램으로 보냅니다. 중복 기록은 Actions
+              캐시에 보존합니다.
+            </p>
+            <figcaption>
+              상시 실행 서버를 두지 않아 개인·지인용 규모에서는 별도 서버 비용이
+              필요하지 않습니다.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section id="threads" class="section" aria-labelledby="threads-title">
+          <div class="section-heading">
+            <span class="section-index">07</span>
+            <div class="section-title">
+              <h2 id="threads-title">Threads 준비 상태</h2>
+              <p>
+                코드는 준비되어 있지만 운영 스위치는 꺼져 있습니다. 따라서 현재
+                자동 브리핑에는 Threads 게시물이 포함되지 않습니다.
+              </p>
+            </div>
+          </div>
+          <div class="fact-grid">
+            <article class="fact">
+              <span class="badge warning">권한 대기</span>
+              <h3 class="space-top-4">우선 계정: choi.openai</h3>
+              <p>
+                계정 우선순위는 100으로 가장 높습니다. 활성화되면 최근 게시물을
+                가져오고, 작성자가 자신의 글에 이어 쓴 답글도 한 본문으로
+                합칩니다.
+              </p>
+            </article>
+            <article class="fact">
+              <h3>키워드 후보</h3>
+              <p>
+                <code>AI agent</code>, <code>LLM</code>, <code>OpenAI</code>,
+                <code>Claude</code>, <code>Gemini</code>의 최근 게시물을
+                검색하며 하루 최대 4개 후보로 제한하도록 설정되어 있습니다.
+              </p>
+            </article>
+          </div>
+          <div class="callout warning" role="note">
+            <h3>다시 켜려면</h3>
+            <p>
+              Meta의 <code>threads_profile_discovery</code> 등 필요한 권한이
+              실제 앱에서 승인되어야 하고, 운영 토큰의 만료·갱신 방식을 관리해야
+              합니다. 이 작업이 번거롭다면 RSS 모드만으로도 봇은 정상
+              운영됩니다.
+            </p>
+          </div>
+        </section>
+
+        <section
+          id="operation"
+          class="section"
+          aria-labelledby="operation-title"
+        >
+          <div class="section-heading">
+            <span class="section-index">08</span>
+            <div class="section-title">
+              <h2 id="operation-title">운영과 점검 방법</h2>
+              <p>
+                설정 확인과 시험 실행을 거친 뒤 실제 발송을 할 수 있습니다. 시험
+                실행은 텔레그램 전송과 중복 기록을 하지 않습니다.
+              </p>
+            </div>
+          </div>
+          <div class="code-grid">
+            <div class="code-block">
+              <h3>로컬 점검</h3>
+              <pre><code>uv sync
+uv run ai-trend-bot check-config
+uv run ai-trend-bot run --dry-run --limit 15</code></pre>
+            </div>
+            <div class="code-block">
+              <h3>실제 텔레그램 발송</h3>
+              <pre><code>uv run ai-trend-bot run --send --limit 15</code></pre>
+            </div>
+          </div>
+          <h3 class="space-top-8">저장소 구조</h3>
+          <pre class="repo-tree">
+ai-trend-bot/
+├── ai_trend_bot/          수집·요약·저장·발송 코드
+├── config/sources.toml    출처·시간·Threads 설정
+├── tests/                 자동 테스트
+├── .github/workflows/     예약 실행 정의
+├── docs/                  이 개요 문서
+├── DESIGN.md              문서 디자인 규칙
+└── README.md              실행 안내</pre>
+          <div class="table-wrap space-top-6">
+            <table>
+              <caption>
+                최근 검증 기준
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">검사</th>
+                  <th scope="col">기대 결과</th>
+                  <th scope="col">보호 범위</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>pytest</td>
+                  <td>12개 테스트 통과</td>
+                  <td>설정·수집·요약·중복·Threads·CLI</td>
+                </tr>
+                <tr>
+                  <td>Ruff</td>
+                  <td>린트 통과</td>
+                  <td>코드 스타일과 잠재 오류</td>
+                </tr>
+                <tr>
+                  <td>basedpyright</td>
+                  <td>타입 오류 0건</td>
+                  <td>엄격한 Python 타입 안정성</td>
+                </tr>
+                <tr>
+                  <td>GitHub Actions</td>
+                  <td>워크플로 정의 확인</td>
+                  <td>원격 설치·예약·캐시·발송 구성</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="risks" class="section" aria-labelledby="risks-title">
+          <div class="section-heading">
+            <span class="section-index">09</span>
+            <div class="section-title">
+              <h2 id="risks-title">제약과 다음 단계</h2>
+              <p>
+                개인용 무료 운영에는 충분하지만, 외부 서비스의
+                정책·형식·할당량에 영향을 받습니다.
+              </p>
+            </div>
+          </div>
+          <div class="risk-grid">
+            <details open>
+              <summary>예약 실행이 몇 분 늦을 수 있음</summary>
+              <p>
+                GitHub Actions cron은 정확한 실시간 스케줄러가 아닙니다. 개인
+                브리핑 용도에는 허용 가능한 지연으로 봅니다.
+              </p>
+            </details>
+            <details>
+              <summary>RSS 형식이 바뀔 수 있음</summary>
+              <p>
+                특정 출처가 응답 오류를 내면 경고만 남기고 다른 출처를 계속
+                처리합니다. 장기적으로는 실패 출처 알림이 유용합니다.
+              </p>
+            </details>
+            <details>
+              <summary>Gemini 무료 할당량 영향</summary>
+              <p>
+                할당량이 줄거나 모델명이 바뀌면 요약 단계가 실패할 수 있습니다.
+                필요하면 모델과 호출량을 설정값으로 조정합니다.
+              </p>
+            </details>
+            <details>
+              <summary>Actions 캐시의 영속성 한계</summary>
+              <p>
+                캐시가 사라지면 일부 과거 항목이 다시 후보가 될 수 있습니다.
+                사용량이 커질 때만 외부 데이터 저장소를 검토하면 됩니다.
+              </p>
+            </details>
+            <details>
+              <summary>Threads 권한과 토큰 관리</summary>
+              <p>
+                Meta 검수와 토큰 갱신 부담이 실제 가치보다 크면 계속
+                비활성화하는 것이 합리적입니다.
+              </p>
+            </details>
+            <details>
+              <summary>다음으로 해볼 개선</summary>
+              <p>
+                실패 알림, 소스별 일일 상한, 요약 톤 설정, 주간 회고 브리핑
+                순으로 확장하면 운영 가치가 큽니다.
+              </p>
+            </details>
+          </div>
+          <div class="callout success" role="note">
+            <h3>현재 결론</h3>
+            <p>
+              추가 서버 없이 RSS 기반 봇을 운영할 수 있는 상태입니다. Threads는
+              필수 기능이 아니라 선택적 확장으로 남겨두었습니다.
+            </p>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <div class="footer-inner">
+            <p>
+              이 문서는 저장소의 실제 설정과 구현을 기준으로 작성되었습니다.<br />설정값이
+              바뀌면 수집처·시간·상한도 함께 갱신해야 합니다.
+            </p>
+            <a href="https://github.com/jaymunsh/ai-trend-bot"
+              >GitHub 저장소 보기</a
+            >
+          </div>
+        </footer>
+      </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+      const printButton = document.querySelector("[data-print]");
+      printButton?.addEventListener("click", () => window.print());
+      const links = [...document.querySelectorAll(".toc a")];
+      const sections = [...document.querySelectorAll("main section[id]")];
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                for (const link of links) {
+                  link.setAttribute(
+                    "aria-current",
+                    String(link.getAttribute("href") === "#" + entry.target.id),
+                  );
+                }
+              }
+            }
+          },
+          { rootMargin: "-20% 0px -65% 0px" },
+        );
+        for (const section of sections) observer.observe(section);
+      }
+      if (window.mermaid) {
+        const rootStyles = getComputedStyle(document.documentElement);
+        const token = (name) => rootStyles.getPropertyValue(name).trim();
+        window.mermaid.initialize({
+          startOnLoad: true,
+          securityLevel: "strict",
+          theme: "base",
+          themeVariables: {
+            fontFamily: token("--font-sans"),
+            primaryColor: token("--accent-soft"),
+            primaryTextColor: token("--text-primary"),
+            primaryBorderColor: token("--accent-primary"),
+            lineColor: token("--text-secondary"),
+            secondaryColor: token("--surface-secondary"),
+            tertiaryColor: token("--surface-primary"),
+            noteBkgColor: token("--status-warning-soft"),
+            noteTextColor: token("--text-primary"),
+            noteBorderColor: token("--status-warning"),
+          },
+          flowchart: { curve: "linear", htmlLabels: true },
+          sequence: { mirrorActors: false },
+        });
+      }
+    </script>
+  </body>
+</html>

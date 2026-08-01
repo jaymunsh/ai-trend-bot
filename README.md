@@ -5,8 +5,9 @@ RSS와 Threads에서 AI 관련 정보를 모아 한국어로 요약하고 텔레
 ## 확정된 운영 기준
 
 - 발송: 매일 08:17, 14:17, 20:17 (Asia/Seoul)
-- 회차별 최대: 8개, 6개, 6개
-- 하루 최대: 20개
+- 회차별 최대: 15개, 15개, 15개
+- 하루 최대: 45개
+- 관련도 점수와 관계없이 선택된 새 항목을 모두 발송
 - 우선순위: 지정 Threads 계정 → 공식 발표 → 키워드 Threads → 연구·커뮤니티
 - 중복 게시물은 다시 보내지 않음
 - 현재 운영 모드: RSS 뉴스 중심, Threads는 권한 검수 전까지 비활성화
@@ -24,7 +25,7 @@ RSS와 Threads에서 AI 관련 정보를 모아 한국어로 요약하고 텔레
 ```bash
 uv sync
 uv run ai-trend-bot check-config
-uv run ai-trend-bot run --dry-run --limit 3
+uv run ai-trend-bot run --dry-run --limit 15
 ```
 
 관심 계정과 키워드는 `config/sources.toml`에서 관리합니다.
@@ -32,7 +33,7 @@ uv run ai-trend-bot run --dry-run --limit 3
 실제 텔레그램 발송은 다음 명령으로 확인합니다.
 
 ```bash
-uv run ai-trend-bot run --send --limit 3
+uv run ai-trend-bot run --send --limit 15
 ```
 
 ## 현재 구현 상태
@@ -47,3 +48,8 @@ uv run ai-trend-bot run --send --limit 3
 - [x] 텔레그램 회차별 묶음 발송
 - [x] SQLite 중복 기록
 - [x] GitHub Actions 3회 예약 실행
+
+## 프로젝트 한눈에 보기
+
+구현 구조, 수집처, 예약 시간, 보안과 Threads 보류 상태는
+[`docs/how-it-works.html`](docs/how-it-works.html)에 한국어 다이어그램 문서로 정리되어 있습니다.
