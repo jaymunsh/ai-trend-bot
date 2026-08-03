@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.11",
     "pydantic-settings>=2.10",
     "rich>=14",
+    "trafilatura>=2.2.0",
     "typer>=0.16",
 ]
 

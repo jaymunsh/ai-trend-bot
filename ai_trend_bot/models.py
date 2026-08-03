@@ -12,6 +12,11 @@ class SourceKind(StrEnum):
     THREADS_KEYWORD = "threads_keyword"
 
 
+def item_key(url: HttpUrl) -> str:
+    """Stable identity for an item, shared by its raw and digested forms."""
+    return sha256(str(url).encode()).hexdigest()
+
+
 class RawItem(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
@@ -27,7 +32,7 @@ class RawItem(BaseModel):
     @computed_field
     @property
     def key(self) -> str:
-        return sha256(str(self.url).encode()).hexdigest()
+        return item_key(self.url)
 
 
 class DigestItem(BaseModel):
@@ -37,3 +42,14 @@ class DigestItem(BaseModel):
     summary: str = Field(min_length=1)
     source_url: HttpUrl
     source_label: str = Field(min_length=1)
+    category: str = ""
+    # One-line description of the underlying event, recorded so later runs can
+    # recognise follow-up coverage that has a different URL.
+    event: str = ""
+    # (label, url) for other outlets that covered the same event.
+    also: tuple[tuple[str, str], ...] = ()
+
+    @computed_field
+    @property
+    def key(self) -> str:
+        return item_key(self.source_url)

@@ -1,8 +1,7 @@
 [delivery]
 timezone = "Asia/Seoul"
-send_times = ["08:17", "14:17", "20:17"]
-daily_max = 45
-run_limits = [15, 15, 15]
+send_times = ["07:30", "13:30", "19:30"]
+per_source_max = 3
 
 [threads]
 enabled = false
@@ -25,38 +24,188 @@ collect_replies = true
 name = "OpenAI News"
 url = "https://openai.com/news/rss.xml"
 category = "official"
+max_items = 15
+
 
 [[feeds]]
 name = "Google DeepMind"
 url = "https://deepmind.google/blog/rss.xml"
 category = "official"
+max_items = 15
+
 
 [[feeds]]
 name = "Google AI"
 url = "https://blog.google/technology/ai/rss/"
 category = "official"
+max_items = 15
+
+
+[[feeds]]
+name = "Google Developers"
+url = "https://developers.googleblog.com/feeds/posts/default"
+category = "official"
+max_items = 15
+
+
+[[feeds]]
+name = "Mistral AI"
+url = "https://mistral.ai/rss.xml"
+category = "official"
+max_items = 10
+
+
+[[feeds]]
+name = "Apple Machine Learning"
+url = "https://machinelearning.apple.com/rss.xml"
+category = "official"
+max_items = 10
+
 
 [[feeds]]
 name = "NVIDIA Generative AI"
 url = "https://blogs.nvidia.com/blog/category/generative-ai/feed/"
 category = "official"
+max_items = 10
+
 
 [[feeds]]
 name = "AWS Machine Learning"
 url = "https://aws.amazon.com/blogs/machine-learning/feed/"
 category = "official"
+max_items = 10
+
 
 [[feeds]]
 name = "GitHub AI & ML"
 url = "https://github.blog/ai-and-ml/feed/"
 category = "official"
+max_items = 10
+
+
+[[feeds]]
+name = "TechCrunch AI"
+url = "https://techcrunch.com/category/artificial-intelligence/feed/"
+category = "community"
+max_items = 15
+
+
+[[feeds]]
+name = "VentureBeat AI"
+url = "https://venturebeat.com/category/ai/feed/"
+category = "community"
+max_items = 15
+
+
+[[feeds]]
+name = "The Verge AI"
+url = "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+category = "community"
+max_items = 15
+
+
+[[feeds]]
+name = "Ars Technica"
+url = "https://feeds.arstechnica.com/arstechnica/technology-lab"
+category = "community"
+max_items = 15
+
+
+[[feeds]]
+name = "MIT Technology Review AI"
+url = "https://www.technologyreview.com/topic/artificial-intelligence/feed"
+category = "community"
+max_items = 10
+
+
+[[feeds]]
+name = "Simon Willison"
+url = "https://simonwillison.net/atom/everything/"
+category = "community"
+max_items = 15
+
+
+[[feeds]]
+name = "Import AI"
+url = "https://importai.substack.com/feed"
+category = "community"
+max_items = 5
+
+
+[[feeds]]
+name = "Sebastian Raschka"
+url = "https://magazine.sebastianraschka.com/feed"
+category = "community"
+max_items = 5
+
+
+[[feeds]]
+name = "Hacker News (AI)"
+url = "https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points%3E150&query=AI%20OR%20LLM%20OR%20OpenAI%20OR%20Anthropic&hitsPerPage=20"
+category = "community"
+kind = "hn"
+max_items = 20
+
+
+[[feeds]]
+name = "Hugging Face 트렌딩"
+url = "https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit=15"
+category = "community"
+kind = "hf"
+max_items = 15
+
 
 [[feeds]]
 name = "Hugging Face Blog"
 url = "https://huggingface.co/blog/feed.xml"
-category = "community"
+category = "research"
+max_items = 10
+
 
 [[feeds]]
-name = "arXiv Artificial Intelligence"
+name = "arXiv cs.AI"
 url = "https://export.arxiv.org/rss/cs.AI"
 category = "research"
+max_items = 20
+
+
+[[feeds]]
+name = "arXiv cs.CL"
+url = "https://export.arxiv.org/rss/cs.CL"
+category = "research"
+max_items = 20
+
+
+[[feeds]]
+name = "arXiv cs.LG"
+url = "https://export.arxiv.org/rss/cs.LG"
+category = "research"
+max_items = 20
+
+
+[[feeds]]
+name = "Berkeley AI Research"
+url = "https://bair.berkeley.edu/blog/feed.xml"
+category = "research"
+max_items = 5
+
+
+[[feeds]]
+name = "AI타임스"
+url = "https://www.aitimes.com/rss/allArticle.xml"
+category = "community"
+max_items = 20
+
+
+[[feeds]]
+name = "전자신문"
+url = "https://rss.etnews.com/Section901.xml"
+category = "community"
+max_items = 15
+
+
+[[feeds]]
+name = "Threads @choi.openai"
+url = "https://rsshub.rssforever.com/threads/choi.openai"
+category = "community"
+max_items = 10

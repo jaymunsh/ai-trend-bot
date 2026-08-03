@@ -1,18 +1,25 @@
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import datetime
 from functools import partial
-from typing import final
+from pathlib import Path
+from typing import Final, final
 
 import httpx2
 from pydantic import ValidationError
 
 from ai_trend_bot.config import AppConfig
+from ai_trend_bot.enrich import fetch_body
 from ai_trend_bot.feeds import FeedClient
 from ai_trend_bot.gemini import GeminiClient
 from ai_trend_bot.models import DigestItem, RawItem
-from ai_trend_bot.store import SeenStore
-from ai_trend_bot.telegram import TelegramClient
-from ai_trend_bot.threads import ThreadsClient
+from ai_trend_bot.store import SentLog
+from ai_trend_bot.telegram import SEOUL, TelegramClient, render_header
+from ai_trend_bot.triage import Dropped, Selection, apply_triage
+
+# Free-tier Gemini answers 503 to a few hundred candidates in one request; 100 is served reliably.
+TRIAGE_BATCH: Final = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,65 +32,110 @@ class RunOptions:
 class RunResult:
     items: tuple[DigestItem, ...]
     warnings: tuple[str, ...]
+    header: str = ""
+    dropped: tuple[Dropped, ...] = ()
+    candidates: int = 0
 
 
 @dataclass(frozen=True, slots=True)
 class PipelineClients:
     feeds: FeedClient
-    threads: ThreadsClient
     gemini: GeminiClient
     telegram: TelegramClient
+    http: httpx2.AsyncClient
 
 
 @final
 class BotPipeline:
-    def __init__(self, clients: PipelineClients, store: SeenStore) -> None:
+    def __init__(self, clients: PipelineClients, log: SentLog, editorial_path: Path) -> None:
         self._clients = clients
-        self._store = store
+        self._log = log
+        self._editorial_path = editorial_path
 
     async def run(self, config: AppConfig, options: RunOptions) -> RunResult:
-        raw_items: list[RawItem] = []
-        warnings: list[str] = []
-        for feed in config.feeds:
-            fetched, warning = await self._fetch(partial(self._clients.feeds.fetch, feed), feed.name)
-            raw_items.extend(fetched)
-            if warning:
-                warnings.append(warning)
-        if config.threads.enabled:
-            for account in sorted(
-                config.threads.watch_accounts, key=lambda candidate: candidate.priority, reverse=True
-            ):
-                fetched, warning = await self._fetch(
-                    partial(self._clients.threads.fetch_account, account),
-                    f"@{account.username}",
-                )
-                raw_items.extend(fetched)
-                if warning:
-                    warnings.append(warning)
-
-            keyword_items: list[RawItem] = []
-            for keyword in config.threads.keywords:
-                fetched, warning = await self._fetch(
-                    partial(self._clients.threads.search, keyword),
-                    f"키워드 {keyword}",
-                )
-                keyword_items.extend(fetched)
-                if warning:
-                    warnings.append(warning)
-            raw_items.extend(keyword_items[: config.threads.keyword_daily_max])
-
-        unique = {item.key: item for item in raw_items}
-        ordered = sorted(unique.values(), key=lambda item: (item.priority, item.published_at), reverse=True)
-        unseen_keys = set(self._store.unseen(tuple(item.key for item in ordered)))
-        selected = tuple(item for item in ordered if item.key in unseen_keys)[: options.limit]
-        if not selected:
+        candidates, warnings = await self._collect(config)
+        if not candidates:
             return RunResult(items=(), warnings=tuple(warnings))
 
-        digest = await self._clients.gemini.summarize(selected)
+        selection = await self._triage(candidates, limit=options.limit)
+        if not selection.kept:
+            return RunResult(
+                items=(),
+                warnings=tuple(warnings),
+                dropped=selection.dropped,
+                candidates=len(candidates),
+            )
+
+        # Only survivors get the article body fetched; that is what makes it affordable.
+        enriched = await asyncio.gather(
+            *(fetch_body(self._clients.http, selected.item) for selected in selection.kept),
+        )
+        summaries = await self._clients.gemini.summarize(enriched)
+        digest = tuple(
+            summary.model_copy(
+                update={
+                    "category": str(selected.verdict.category),
+                    "event": selected.verdict.event,
+                    "also": tuple((other.source, str(other.url)) for other in selected.merged),
+                },
+            )
+            for summary, selected in zip(summaries, selection.kept, strict=True)
+        )
+
+        header = render_header(datetime.now(tz=SEOUL), len(digest))
         if not options.dry_run:
-            await self._clients.telegram.send(digest)
-            self._store.mark(tuple(item.key for item in selected))
-        return RunResult(items=digest, warnings=tuple(warnings))
+            # Record per delivered message so a failure partway through does not re-send.
+            async for delivered in self._clients.telegram.send(digest, header):
+                self._log.mark(delivered)
+        return RunResult(
+            items=digest,
+            warnings=tuple(warnings),
+            header=header,
+            dropped=selection.dropped,
+            candidates=len(candidates),
+        )
+
+    async def _triage(self, candidates: tuple[RawItem, ...], *, limit: int) -> Selection:
+        """Screen in batches, then re-screen the survivors together.
+
+        A few hundred candidates in one request exceeds what the free tier will serve
+        (it answers 503), so the first round runs in batches. Batching alone would let
+        two outlets covering the same event land in different batches and both survive,
+        so the survivors — a few dozen — get one more pass that dedupes and ranks
+        across the whole set.
+        """
+        editorial = self._editorial_path.read_text(encoding="utf-8")
+        recent = self._log.recent_events()
+        batches = [candidates[start : start + TRIAGE_BATCH] for start in range(0, len(candidates), TRIAGE_BATCH)]
+        rounds = await asyncio.gather(
+            *(self._clients.gemini.triage(batch, editorial=editorial, recent_events=recent) for batch in batches),
+        )
+        screened = [
+            apply_triage(batch, verdicts, limit=len(batch)) for batch, verdicts in zip(batches, rounds, strict=True)
+        ]
+        dropped = tuple(drop for result in screened for drop in result.dropped)
+        survivors = tuple(selected.item for result in screened for selected in result.kept)
+        if len(batches) == 1:
+            return Selection(kept=screened[0].kept[:limit], dropped=dropped)
+
+        final = await self._clients.gemini.triage(survivors, editorial=editorial, recent_events=recent)
+        settled = apply_triage(survivors, final, limit=limit)
+        return Selection(kept=settled.kept, dropped=(*dropped, *settled.dropped))
+
+    async def _collect(self, config: AppConfig) -> tuple[tuple[RawItem, ...], list[str]]:
+        warnings: list[str] = []
+        fetched = await asyncio.gather(
+            *(self._fetch(partial(self._clients.feeds.fetch, feed), feed.name) for feed in config.feeds),
+        )
+        raw_items: list[RawItem] = []
+        for items, warning in fetched:
+            raw_items.extend(items)
+            if warning:
+                warnings.append(warning)
+        unique = {item.key: item for item in raw_items}
+        ordered = sorted(unique.values(), key=lambda item: (item.priority, item.published_at), reverse=True)
+        unseen_keys = set(self._log.unseen(tuple(item.key for item in ordered)))
+        return tuple(item for item in ordered if item.key in unseen_keys), warnings
 
     @staticmethod
     async def _fetch(
@@ -96,5 +148,5 @@ class BotPipeline:
             return (), f"{label}: HTTP {error.response.status_code}"
         except httpx2.RequestError:
             return (), f"{label}: 네트워크 오류"
-        except ValidationError as error:
-            return (), f"{label}: 응답 형식 오류 ({error.error_count()}건)"
+        except (ValidationError, ValueError, KeyError) as error:
+            return (), f"{label}: 응답 형식 오류 ({type(error).__name__})"

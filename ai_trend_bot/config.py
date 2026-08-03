@@ -2,16 +2,10 @@ import tomllib
 from datetime import time
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar, Final
+from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator, model_validator
-from pydantic_core import PydanticCustomError
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-SCHEDULE_SIZE_ERROR_CODE: Final = "schedule_size"
-SCHEDULE_SIZE_ERROR_MESSAGE: Final = "send_times and run_limits must have equal lengths"
-DAILY_LIMIT_ERROR_CODE: Final = "daily_limit"
-DAILY_LIMIT_ERROR_MESSAGE: Final = "run_limits must sum to daily_max"
 
 
 class FeedCategory(StrEnum):
@@ -22,14 +16,25 @@ class FeedCategory(StrEnum):
     RESEARCH = "research"
 
 
+class FeedKind(StrEnum):
+    """How a source is fetched."""
+
+    RSS = "rss"
+    HACKER_NEWS = "hn"
+    HUGGING_FACE = "hf"
+
+
 class FeedSource(BaseModel):
-    """A configured RSS or Atom source."""
+    """A configured source."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
     name: str = Field(min_length=1)
     url: HttpUrl
     category: FeedCategory
+    kind: FeedKind = FeedKind.RSS
+    # Firehose sources (arXiv returns 200+ entries) would otherwise drown the triage input.
+    max_items: int = Field(default=15, ge=1, le=100)
 
 
 class WatchAccount(BaseModel):
@@ -66,17 +71,7 @@ class DeliveryConfig(BaseModel):
 
     timezone: str = "Asia/Seoul"
     send_times: tuple[time, ...]
-    daily_max: int = Field(default=45, ge=1, le=60)
-    run_limits: tuple[int, ...]
-
-    @model_validator(mode="after")
-    def check_schedule_limits(self) -> "DeliveryConfig":
-        """Require one cap per scheduled run and a consistent daily cap."""
-        if len(self.send_times) != len(self.run_limits):
-            raise PydanticCustomError(SCHEDULE_SIZE_ERROR_CODE, SCHEDULE_SIZE_ERROR_MESSAGE)
-        if sum(self.run_limits) != self.daily_max:
-            raise PydanticCustomError(DAILY_LIMIT_ERROR_CODE, DAILY_LIMIT_ERROR_MESSAGE)
-        return self
+    per_source_max: int = Field(default=3, ge=1, le=15)
 
 
 class AppConfig(BaseModel):
