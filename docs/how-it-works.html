@@ -844,7 +844,7 @@
     <div class="page">
       <aside class="rail" aria-label="문서 목차">
         <div class="brand">
-          <strong>AI 트렌드 봇</strong><span>구현 및 운영 개요 · v0.1</span>
+          <strong>AI 트렌드 봇</strong><span>구현 및 운영 개요 · 2026-08 개편 반영</span>
         </div>
         <p class="rail-label">Contents</p>
         <nav class="toc">
@@ -871,12 +871,13 @@
           </div>
           <div class="hero-side">
             <p class="lede">
-              8개 RSS에서 새 소식을 모으고, 출처별로 고르게 선별한 최대 15건을
-              Gemini가 한국어로 요약해 하루 세 번 전달하는 개인용 자동화입니다.
+              27개 출처에서 하루 300건 남짓의 후보를 모아, 편집 기준으로 걸러낸
+              소수만 원문을 읽고 한국어로 요약해 하루 세 번 전달하는 개인용
+              자동화입니다.
             </p>
             <div class="status-line">
-              <span class="badge success">RSS 운영 중</span
-              ><span class="badge warning">Threads 보류</span
+              <span class="badge success">운영 중</span
+              ><span class="badge neutral">27개 출처</span
               ><span class="badge neutral">GitHub Actions</span>
             </div>
             <button class="print-button" type="button" data-print>
@@ -891,50 +892,50 @@
             <div class="section-title">
               <h2 id="overview-title">현재 구현 상태</h2>
               <p>
-                수집부터 중복 제거, AI 요약, 텔레그램 발송, 예약 실행까지 한
-                사이클이 완성되어 있습니다.
+                수집부터 선별, 원문 요약, 텔레그램 발송, 기록 커밋까지 한
+                사이클이 자동으로 돕니다.
               </p>
             </div>
           </div>
           <div class="metrics">
             <article class="metric">
               <span class="metric-label">활성 수집처</span
-              ><strong class="metric-value">8개</strong
-              ><small>공식 6 · 연구 1 · 커뮤니티 1</small>
+              ><strong class="metric-value">27개</strong
+              ><small>공식 9 · 미디어 5 · 커뮤니티 6 · 연구 5 · 국내 2</small>
             </article>
             <article class="metric">
               <span class="metric-label">하루 실행</span
               ><strong class="metric-value">3회</strong
-              ><small>08:17 · 14:17 · 20:17 KST</small>
+              ><small>07:30 · 13:30 · 19:30 KST</small>
             </article>
             <article class="metric">
-              <span class="metric-label">하루 상한</span
-              ><strong class="metric-value">45건</strong
-              ><small>회차별 최대 15 · 15 · 15건</small>
+              <span class="metric-label">회차 발송량</span
+              ><strong class="metric-value">가변</strong
+              ><small>기준 통과분만 · 실측 7~14건</small>
             </article>
             <article class="metric">
-              <span class="metric-label">출처 다양성</span
-              ><strong class="metric-value">최대 3건</strong
-              ><small>한 출처가 한 회차를 독점하지 않음</small>
+              <span class="metric-label">선별 라운드</span
+              ><strong class="metric-value">2회</strong
+              ><small>배치 심사 → 전역 선별</small>
             </article>
           </div>
           <div class="fact-grid">
             <article class="fact">
               <h3>완성된 기능</h3>
               <ul>
-                <li>RSS 수집과 출처별 순환 선별</li>
-                <li>URL 해시 기반 중복 제거</li>
-                <li>Gemini 한국어 번역·3단 심층 요약</li>
-                <li>텔레그램 메시지 묶음 발송</li>
-                <li>GitHub Actions 예약 실행과 캐시</li>
+                <li>27개 출처 수집 (RSS · Hacker News · Hugging Face)</li>
+                <li>분류·사건 병합·후속 판정·순위로 선별</li>
+                <li>통과분만 원문 본문을 받아 심층 요약</li>
+                <li>텔레그램 발송과 메시지 분할</li>
+                <li>발송 기록을 저장소에 자동 커밋</li>
               </ul>
             </article>
             <article class="fact">
-              <h3>현재 운영 모드</h3>
+              <h3>무엇이 달라졌나</h3>
               <p>
-                실제 자동 실행은 RSS 뉴스 중심입니다. Threads 수집 코드는 계정
-                피드, 자기 답글 결합, 키워드 검색까지 구현되어 있지만 Meta 권한
-                검수 전까지 설정에서 꺼져 있습니다.
+                예전에는 안 본 항목을 출처별로 번갈아 골라 15칸을 채웠습니다.
+                좋은 소식이 3건뿐인 날에도 12건을 끌어왔다는 뜻입니다. 지금은
+                편집 기준을 통과한 것만 보내고, 통과분이 없으면 보내지 않습니다.
               </p>
             </article>
           </div>
@@ -950,8 +951,8 @@
             <div class="section-title">
               <h2 id="architecture-title">처리 구조</h2>
               <p>
-                각 단계가 실패 범위를 좁게 유지하도록 분리되어 있으며, 한 출처가
-                실패해도 가능한 나머지 출처는 계속 처리합니다.
+                네 단계가 각자의 입출력만 책임집니다. 한 출처가 실패해도 경고만
+                남기고 나머지는 계속 처리합니다.
               </p>
             </div>
           </div>
@@ -965,39 +966,42 @@
             >
               <pre class="mermaid">
 flowchart LR
-  subgraph Input[수집]
-    RSS[8개 RSS 피드]
-    TH[Threads 계정·키워드\n현재 비활성]
+  subgraph Collect[① 수집]
+    RSS[24개 RSS 피드]
+    HN[Hacker News API]
+    HF[Hugging Face API]
   end
-  subgraph Core[선별과 가공]
-    FETCH[Feed / Threads Client]
-    DEDUPE[URL 해시 중복 제거\nSQLite]
-    SORT[출처 우선순위·시간 정렬]
-    BALANCE[출처별 순환 선별\n최대 3건]
-    AI[Gemini\n번역·요약]
+  subgraph Triage[② 선별]
+    SEEN[발송 기록 대조\nsent.jsonl]
+    R1[1차 배치 심사\n100건씩]
+    R2[2차 전역 선별\n중복 병합·순위]
   end
-  subgraph Delivery[전달]
-    GROUP[3,800자 이하 묶음]
+  subgraph Enrich[③ 심화]
+    BODY[원문 본문 추출\ntrafilatura]
+    AI[Gemini 심층 요약]
+  end
+  subgraph Deliver[④ 전달]
+    MSG[3,800자 이하 분할]
     TG[Telegram Bot]
+    LOG[기록 커밋]
   end
-  RSS --> FETCH
-  TH -. 권한 확보 후 .-> FETCH
-  FETCH --> DEDUPE --> SORT --> BALANCE --> AI
-  AI -->|회차당 최대 15건| GROUP --> TG
-  AI -->|선택 후보 처리 기록| DEDUPE</pre>
+  RSS --> SEEN
+  HN --> SEEN
+  HF --> SEEN
+  SEEN -->|후보 300건대| R1 --> R2
+  R2 -->|통과분만| BODY --> AI
+  AI --> MSG --> TG --> LOG
+  LOG -. 다음 회차 후속 판정 .-> R1</pre>
             </section>
             <p class="diagram-fallback">
-              텍스트 요약: RSS와 선택적 Threads 입력을 수집하고, SQLite로 중복을
-              제거한 뒤 우선순위로 정렬합니다. 지정 Threads 계정은 먼저 포함하고,
-              나머지는 출처마다 최대 3건씩 순환 선별해 Gemini로 요약합니다.
+              텍스트 요약: 27개 출처에서 후보를 모아 이미 보낸 것을 걸러낸 뒤,
+              100건씩 배치로 1차 심사하고 생존자를 다시 모아 2차로 선별합니다.
+              통과한 소수만 원문 본문을 받아 요약하고, 발송 후 기록을 저장소에
+              커밋합니다.
             </p>
             <figcaption>
-              데이터는
-              <strong
-                >수집 → 중복 제거 → 우선순위 정렬 → 출처 균형 선별 → AI 요약 →
-                메시지 분할 → 발송</strong
-              >
-              순서로 흐릅니다.
+              원칙은 <strong>싸게 넓게 거르고, 비싸게 좁게 판다</strong>입니다.
+              본문 fetch와 심층 요약은 선별을 통과한 소수에게만 씁니다.
             </figcaption>
           </figure>
           <figure class="diagram diagram-wide">
@@ -1011,30 +1015,35 @@ flowchart LR
               <pre class="mermaid">
 sequenceDiagram
   participant GA as GitHub Actions
-  participant FE as RSS 출처
-  participant DB as SQLite 캐시
+  participant SRC as 27개 출처
+  participant LOG as sent.jsonl
   participant GM as Gemini
+  participant WEB as 기사 원문
   participant TG as Telegram
-  GA->>FE: 8개 피드 요청
-  FE-->>GA: 최신 원문 후보
-  GA->>DB: 이미 보낸 URL 확인
-  DB-->>GA: 미발송 후보
-  GA->>GA: 출처별 최대 3건 순환 선별
-  GA->>GM: 제목·본문·출처 전달
-  GM-->>GA: 핵심·중요성·관련 대상 요약
-  GA->>TG: 새 항목 최대 15건 묶음 발송
-  TG-->>GA: 발송 대상이 있으면 완료
-  GA->>DB: 발송 후보 전체 URL 해시 기록
-  GA->>GA: 캐시 저장</pre>
+  GA->>SRC: 병렬 요청
+  SRC-->>GA: 후보 300건대
+  GA->>LOG: 이미 보낸 URL·최근 사건 확인
+  LOG-->>GA: 미발송 후보 + 최근 2주 사건 목록
+  GA->>GM: 1차 심사 (100건씩 배치)
+  GM-->>GA: 분류·통과여부·사유·사건 요지
+  GA->>GM: 2차 선별 (생존자 전체)
+  GM-->>GA: 중복 병합·최종 순위
+  GA->>WEB: 통과분 원문 요청
+  WEB-->>GA: 본문 (실패 시 티저로 폴백)
+  GA->>GM: 심층 요약
+  GM-->>GA: 핵심·중요성·관련 대상
+  GA->>TG: 메시지 발송
+  TG-->>GA: 메시지별 완료
+  GA->>LOG: 도착한 만큼만 기록 후 커밋</pre>
             </section>
             <p class="diagram-fallback">
-              텍스트 요약: GitHub Actions가 미발송 항목을 찾은 뒤 출처별로
-              번갈아 최대 3건씩 고릅니다. 요약된 결과는 모두 텔레그램으로
-              전달하고 이번에 처리한 후보의 URL을 캐시에 기록합니다.
+              텍스트 요약: 후보를 모아 두 번에 걸쳐 선별하고, 통과분의 원문을
+              받아 요약해 발송합니다. 기록은 메시지가 실제로 도착한 뒤에만
+              남깁니다.
             </p>
             <figcaption>
-              시험 실행은 실제 발송이나 중복 기록을 하지 않아 운영 데이터를
-              오염시키지 않습니다.
+              시험 실행(<code>--dry-run</code>)은 발송도 기록도 하지 않아 운영
+              데이터를 건드리지 않습니다.
             </figcaption>
           </figure>
         </section>
@@ -1046,34 +1055,36 @@ sequenceDiagram
               <h2 id="schedule-title">운영 일정</h2>
               <p>
                 한국 시간 기준 하루 세 번 실행합니다. GitHub Actions의 UTC
-                cron은 각각 23:17, 05:17, 11:17로 저장되어 있습니다.
+                cron은 각각 22:30, 04:30, 10:30으로 저장되어 있습니다.
               </p>
             </div>
           </div>
           <ol class="timeline">
             <li>
-              <time datetime="08:17">08:17</time
-              ><strong>아침 브리핑 · 최대 15건</strong
+              <time datetime="07:30">07:30</time
+              ><strong>아침 브리핑 🌅</strong
               ><span
-                >밤사이 공식 발표와 연구 업데이트를 넉넉히 반영합니다.</span
+                >밤사이 올라온 해외 공식 발표와 연구를 반영합니다.</span
               >
             </li>
             <li>
-              <time datetime="14:17">14:17</time
-              ><strong>오후 브리핑 · 최대 15건</strong
-              ><span>오전 이후 추가된 새 소식을 보충합니다.</span>
+              <time datetime="13:30">13:30</time
+              ><strong>점심 브리핑 ☀️</strong
+              ><span>오전에 추가된 국내외 소식을 보충합니다.</span>
             </li>
             <li>
-              <time datetime="20:17">20:17</time
-              ><strong>저녁 브리핑 · 최대 15건</strong
+              <time datetime="19:30">19:30</time
+              ><strong>저녁 브리핑 🌙</strong
               ><span>당일 마지막 업데이트를 전달합니다.</span>
             </li>
           </ol>
           <div class="callout info" role="note">
-            <h3>왜 정각이 아니라 17분인가?</h3>
+            <h3>건수는 회차마다 다릅니다</h3>
             <p>
-              GitHub Actions 예약이 몰리는 정각을 피하기 위한 운영값입니다. 예약
-              실행은 플랫폼 상황에 따라 몇 분 지연될 수 있습니다.
+              상한(기본 30, 최대 40)은 목표치가 아니라 폭주 방지선입니다. 조용한
+              날은 몇 건만 오고, 통과분이 없으면 아예 오지 않습니다.
+              GitHub Actions 예약 실행은 플랫폼 부하에 따라 5~15분 지연되는 것이
+              정상입니다.
             </p>
           </div>
         </section>
@@ -1084,104 +1095,100 @@ sequenceDiagram
             <div class="section-title">
               <h2 id="sources-title">정보 출처</h2>
               <p>
-                현재는 공식 발표를 가장 우선하고, 연구와 커뮤니티를 보완재로
-                사용합니다.
+                벤더 공식 발표만으로는 경쟁사 평가·사고·규제가 잡히지 않고,
+                미디어만으로는 새 오픈웨이트 모델이 늦습니다. 계층을 섞습니다.
               </p>
             </div>
           </div>
           <ul class="source-list">
             <li>
               <span class="source-number">01</span
-              ><span class="source-name">OpenAI News</span
+              ><span class="source-name">OpenAI · Google DeepMind · Google AI · Google Developers</span
               ><span class="source-type">공식 · 80점</span>
             </li>
             <li>
               <span class="source-number">02</span
-              ><span class="source-name">Google DeepMind</span
+              ><span class="source-name">Mistral AI · Apple ML · NVIDIA · AWS ML · GitHub AI &amp; ML</span
               ><span class="source-type">공식 · 80점</span>
             </li>
             <li>
               <span class="source-number">03</span
-              ><span class="source-name">Google AI</span
-              ><span class="source-type">공식 · 80점</span>
+              ><span class="source-name">TechCrunch AI · VentureBeat AI · The Verge AI · Ars Technica · MIT Tech Review</span
+              ><span class="source-type">미디어 · 20점</span>
             </li>
             <li>
               <span class="source-number">04</span
-              ><span class="source-name">NVIDIA Generative AI</span
-              ><span class="source-type">공식 · 80점</span>
+              ><span class="source-name">Simon Willison · Import AI · Sebastian Raschka</span
+              ><span class="source-type">큐레이터 · 20점</span>
             </li>
             <li>
               <span class="source-number">05</span
-              ><span class="source-name">AWS Machine Learning</span
-              ><span class="source-type">공식 · 80점</span>
-            </li>
-            <li>
-              <span class="source-number">06</span
-              ><span class="source-name">GitHub AI &amp; ML</span
-              ><span class="source-type">공식 · 80점</span>
-            </li>
-            <li>
-              <span class="source-number">07</span
-              ><span class="source-name">Hugging Face Blog</span
+              ><span class="source-name">Hacker News (150점 이상) · Hugging Face 트렌딩 모델</span
               ><span class="source-type">커뮤니티 · 20점</span>
             </li>
             <li>
-              <span class="source-number">08</span
-              ><span class="source-name">arXiv Artificial Intelligence</span
+              <span class="source-number">06</span
+              ><span class="source-name">arXiv cs.AI · cs.CL · cs.LG · Berkeley AI Research · Hugging Face Blog</span
               ><span class="source-type">연구 · 30점</span>
+            </li>
+            <li>
+              <span class="source-number">07</span
+              ><span class="source-name">AI타임스 · 전자신문</span
+              ><span class="source-type">국내 · 20점</span>
+            </li>
+            <li>
+              <span class="source-number">08</span
+              ><span class="source-name">Threads @choi.openai (RSSHub 경유)</span
+              ><span class="source-type">커뮤니티 · 20점</span>
             </li>
           </ul>
           <section
             class="table-wrap space-top-6"
-            aria-label="정보 출처 표"
+            aria-label="수집 방식 표"
             tabindex="0"
           >
             <table>
               <caption>
-                출처 우선순위 규칙
+                수집 방식과 항목 상한
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">후보 유형</th>
-                  <th scope="col">우선순위</th>
-                  <th scope="col">현재 상태</th>
+                  <th scope="col">방식</th>
+                  <th scope="col">대상</th>
+                  <th scope="col">항목 상한</th>
                   <th scope="col">설명</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>지정 Threads 계정</td>
-                  <td class="priority">100</td>
-                  <td>비활성</td>
-                  <td><code>choi.openai</code> 게시물과 자기 답글</td>
+                  <td><code>rss</code></td>
+                  <td>25개 출처</td>
+                  <td>5~20건</td>
+                  <td>RSS·Atom 피드. RSSHub 경유 Threads도 여기에 해당</td>
                 </tr>
                 <tr>
-                  <td>공식 RSS</td>
-                  <td class="priority">80</td>
-                  <td>활성</td>
-                  <td>기업·프로젝트의 직접 발표</td>
+                  <td><code>hn</code></td>
+                  <td>Hacker News</td>
+                  <td>20건</td>
+                  <td>Algolia API. 150점 이상 AI 관련 글만</td>
                 </tr>
                 <tr>
-                  <td>Threads 키워드</td>
-                  <td class="priority">40</td>
-                  <td>비활성</td>
-                  <td>최근 게시물 중 키워드 기반 후보</td>
-                </tr>
-                <tr>
-                  <td>연구 RSS</td>
-                  <td class="priority">30</td>
-                  <td>활성</td>
-                  <td>arXiv cs.AI 연구 업데이트</td>
-                </tr>
-                <tr>
-                  <td>커뮤니티 RSS</td>
-                  <td class="priority">20</td>
-                  <td>활성</td>
-                  <td>Hugging Face 기술·생태계 소식</td>
+                  <td><code>hf</code></td>
+                  <td>Hugging Face</td>
+                  <td>15건</td>
+                  <td>트렌딩 모델 API. 새 오픈웨이트 공개를 포착</td>
                 </tr>
               </tbody>
             </table>
           </section>
+          <div class="callout info" role="note">
+            <h3>출처별 상한이 필요한 이유</h3>
+            <p>
+              arXiv cs.LG는 한 번에 200건 넘게 반환합니다. 상한이 없으면 한
+              출처가 후보 풀을 독점합니다. Anthropic과 Meta AI는 RSS를 제공하지
+              않아 빠져 있고, 두 회사 소식은 테크 미디어 경유로만 들어옵니다.
+            </p>
+          </div>
         </section>
 
         <section id="quality" class="section" aria-labelledby="quality-title">
@@ -1190,12 +1197,68 @@ sequenceDiagram
             <div class="section-title">
               <h2 id="quality-title">선별과 출력 품질</h2>
               <p>
-                지정 Threads 계정은 가장 먼저 포함합니다. RSS와 키워드 후보는
-                출처별 최대 3건씩 번갈아 선택해 한 출처의 과도한 편중을 막습니다.
+                점수에 임계값을 걸지 않습니다. 모델의 절대 점수는 좁은 구간에
+                몰려서 어디를 자르든 자의적이 되기 때문입니다. 대신 종류를
+                매기고, 순위는 후보끼리 비교해 정합니다.
               </p>
             </div>
           </div>
-          <figure class="diagram">
+          <section
+            class="table-wrap"
+            aria-label="분류 표"
+            tabindex="0"
+          >
+            <table>
+              <caption>
+                항목 분류와 처리
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">분류</th>
+                  <th scope="col">처리</th>
+                  <th scope="col">예시</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>모델·제품 출시</td>
+                  <td>통과 후보</td>
+                  <td>새 모델 공개, 가격 변경, 사양 변화</td>
+                </tr>
+                <tr>
+                  <td>연구 결과</td>
+                  <td>통과 후보</td>
+                  <td>통념을 뒤집거나 실무 판단을 바꾸는 결과</td>
+                </tr>
+                <tr>
+                  <td>정책·산업·자금</td>
+                  <td>통과 후보</td>
+                  <td>규제, 소송, 대형 투자, 인수</td>
+                </tr>
+                <tr>
+                  <td>도구·오픈소스</td>
+                  <td>통과 후보</td>
+                  <td>새 라이브러리, 오픈웨이트 공개</td>
+                </tr>
+                <tr>
+                  <td>튜토리얼·사용법</td>
+                  <td>코드에서 제외</td>
+                  <td>&ldquo;X로 Y 만들기&rdquo; 형태의 하우투</td>
+                </tr>
+                <tr>
+                  <td>홍보·사례소개</td>
+                  <td>코드에서 제외</td>
+                  <td>고객 사례, 도입 후기, 파트너십</td>
+                </tr>
+                <tr>
+                  <td>기타</td>
+                  <td>코드에서 제외</td>
+                  <td>채용, 행사, 의견 글</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+          <figure class="diagram space-top-6">
             <h3>항목 생명주기</h3>
             <section
               class="diagram-scroll"
@@ -1205,41 +1268,59 @@ sequenceDiagram
               <pre class="mermaid">
 stateDiagram-v2
   [*] --> 수집후보
-  수집후보 --> 제외: URL 중복
-  수집후보 --> 균형선별: 새 항목
-  균형선별 --> 요약대기: 출처별 최대 3건
-  요약대기 --> 발송대기: 한국어 요약 완료
-  발송대기 --> 처리완료: Telegram 완료
-  처리완료 --> 중복기록
-  중복기록 --> [*]
+  수집후보 --> 제외: 이미 발송한 URL
+  수집후보 --> 1차심사: 새 항목
+  1차심사 --> 제외: 분류 탈락·기준 미달·후속 보도
+  1차심사 --> 2차선별: 통과
+  2차선별 --> 제외: 중복 병합·상대적으로 약함
+  2차선별 --> 본문추출: 최종 선정
+  본문추출 --> 요약: 원문 확보 또는 티저 폴백
+  요약 --> 발송
+  발송 --> 기록: 메시지 도착 확인
+  기록 --> [*]
   제외 --> [*]</pre>
             </section>
             <p class="diagram-fallback">
-              텍스트 요약: 중복 URL은 제외하고 출처별로 고르게 새 항목을 골라
-              최대 15건까지 요약합니다. 발송 후보는 중복 기록에 저장합니다.
+              텍스트 요약: 이미 보낸 URL을 뺀 뒤 1차에서 분류와 기준으로 거르고,
+              2차에서 중복을 병합하며 최종 선정합니다. 선정된 것만 원문을 받아
+              요약하고, 발송이 확인된 뒤에 기록합니다.
             </p>
             <figcaption>
-              출처가 충분하지 않으면 15건보다 적게 보낼 수 있습니다. 관련도는
-              참고값으로만 유지하며 발송 항목을 삭제하는 데 사용하지 않습니다.
+              탈락 항목은 사유와 함께 남습니다.
+              <code>--dry-run</code>에서 무엇이 왜 걸러졌는지 확인할 수 있어야
+              기준을 고칠 수 있기 때문입니다.
             </figcaption>
           </figure>
+          <div class="callout info" role="note">
+            <h3>왜 두 번 심사하나</h3>
+            <p>
+              무료 티어 Gemini는 후보 300건대를 한 요청으로 받으면 503을
+              반환합니다. 그래서 1차는 100건씩 나눠 돕니다. 다만 배치만 나누면
+              같은 사건을 다룬 두 매체가 서로 다른 배치에 떨어져 둘 다
+              살아남습니다. 2차는 생존자를 한자리에 놓고 중복을 병합하며,
+              <strong>재심사가 아니라 &ldquo;오늘 실을 것을 고르는&rdquo;
+              선별</strong>로 질문을 바꿉니다. 같은 질문을 두 번 하면 이미 통과한
+              것들이 거의 전부 재승인되기 때문입니다.
+            </p>
+          </div>
           <div class="fact-grid">
             <article class="fact">
               <h3>텔레그램 한 항목의 형식</h3>
               <p>
-                <strong>1. 제목</strong><br />핵심: 확인된 사실<br />왜 중요한가:
-                기술·산업적 의미<br />관련 대상: 직접 영향을 받는 구체적인 독자<br />
-                출처: 원문 제공처<br /><a
-                  href="https://example.com"
-                  >원문 링크</a
-                >
+                <strong>01. 제목</strong><br />[모델·제품 출시]<br /><br />핵심:
+                확인된 사실<br />왜 중요한가: 기술·산업적 의미<br />관련 대상:
+                직접 영향을 받는 구체적인 독자<br /><br />↳ 원문:
+                <a href="https://example.com">매체명</a>
               </p>
             </article>
             <article class="fact">
               <h3>메시지 길이 처리</h3>
               <p>
-                제목·요약·출처·URL을 묶어 보내되 한 메시지를 3,800자 이하로
-                유지합니다. 항목이 길면 여러 메시지로 안전하게 분할합니다.
+                텔레그램은 4,096자를 넘으면 거부합니다. 3,800자로 자르는 이유는
+                HTML 이스케이프 때문입니다. 작은따옴표 하나가
+                <code>&amp;#x27;</code> 6자가 되어 원문 3,900자가 실제로는
+                4,100자로 전송될 수 있습니다. 쪼개진 메시지에는 헤더 첫 줄 끝에
+                <code>[1/3]</code>이 붙습니다.
               </p>
             </article>
           </div>
@@ -1252,7 +1333,7 @@ stateDiagram-v2
               <h2 id="security-title">보안과 배포</h2>
               <p>
                 비밀값은 코드와 분리하고, GitHub Actions가 별도 서버 없이 예약
-                실행을 담당합니다.
+                실행과 기록 보관을 담당합니다.
               </p>
             </div>
           </div>
@@ -1266,20 +1347,20 @@ stateDiagram-v2
               ><span>Telegram 토큰·채팅 ID·Gemini 키</span>
             </li>
             <li>
-              <strong>최소 권한</strong
-              ><span>워크플로의 저장소 권한은 읽기 전용</span>
+              <strong>저장소 쓰기 권한</strong
+              ><span>발송 기록 커밋을 위해 <code>contents: write</code></span>
             </li>
             <li>
-              <strong>중복 캐시</strong
-              ><span><code>.data/seen.sqlite3</code>만 Actions 캐시</span>
+              <strong>발송 기록</strong
+              ><span><code>data/sent.jsonl</code>을 매 실행 후 커밋</span>
             </li>
             <li>
               <strong>직렬 실행</strong
-              ><span>동일 브리핑의 중복 실행을 방지</span>
+              ><span>동일 브리핑의 중복 실행과 커밋 충돌 방지</span>
             </li>
             <li>
               <strong>비공개 저장소</strong
-              ><span>개인 운영 설정 노출을 최소화</span>
+              ><span>월 2,000분 무료 한도 · 실제 사용 약 270분</span>
             </li>
           </ul>
           <figure class="diagram space-top-6">
@@ -1292,21 +1373,21 @@ stateDiagram-v2
               <pre class="mermaid">
 flowchart TB
   REPO[비공개 GitHub 저장소] --> ACTIONS[GitHub Actions\n하루 3회]
-  SECRETS[GitHub Actions Secrets\nTelegram · Gemini] --> ACTIONS
-  CACHE[Actions Cache\nseen.sqlite3] --> ACTIONS
-  ACTIONS --> CACHE
-  ACTIONS --> FEEDS[공개 RSS]
+  SECRETS[Actions Secrets\nTelegram · Gemini] --> ACTIONS
+  ACTIONS --> SOURCES[27개 공개 출처]
   ACTIONS --> GEMINI[Gemini API]
-  ACTIONS --> TELEGRAM[개인 Telegram 채팅]</pre>
+  ACTIONS --> TELEGRAM[개인 Telegram 채팅]
+  ACTIONS -->|발송 후 커밋| REPO</pre>
             </section>
             <p class="diagram-fallback">
-              텍스트 요약: 비공개 GitHub 저장소의 Actions가 Secrets를 받아 RSS와
-              Gemini를 호출하고 개인 텔레그램으로 보냅니다. 중복 기록은 Actions
-              캐시에 보존합니다.
+              텍스트 요약: 비공개 저장소의 Actions가 Secrets를 받아 27개 출처와
+              Gemini를 호출하고 개인 텔레그램으로 보낸 뒤, 발송 기록을 같은
+              저장소에 커밋합니다.
             </p>
             <figcaption>
-              상시 실행 서버를 두지 않아 개인·지인용 규모에서는 별도 서버 비용이
-              필요하지 않습니다.
+              기록을 Actions 캐시가 아닌 git에 두는 이유는 캐시가 7일 미사용이나
+              용량 초과로 사라지기 때문입니다. 사라지면 이미 보낸 항목이 전부
+              재발송됩니다.
             </figcaption>
           </figure>
         </section>
@@ -1315,39 +1396,45 @@ flowchart TB
           <div class="section-heading">
             <span class="section-index">07</span>
             <div class="section-title">
-              <h2 id="threads-title">Threads 준비 상태</h2>
+              <h2 id="threads-title">Threads 지원 상태</h2>
               <p>
-                코드는 준비되어 있지만 운영 스위치는 꺼져 있습니다. 따라서 현재
-                자동 브리핑에는 Threads 게시물이 포함되지 않습니다.
+                공식 API로는 타인 계정을 수집할 수 없습니다. RSSHub를 경유해
+                RSS로 받고 있으며, 다른 출처와 동일하게 다룹니다.
               </p>
             </div>
           </div>
           <div class="fact-grid">
             <article class="fact">
-              <span class="badge warning">권한 대기</span>
-              <h3 class="space-top-4">우선 계정: choi.openai</h3>
+              <span class="badge warning">공식 API 불가</span>
+              <h3 class="space-top-4">왜 심사를 통과할 수 없나</h3>
               <p>
-                계정 우선순위는 100으로 가장 높습니다. 활성화되면 최근 게시물을
-                가져오고, 작성자가 자신의 글에 이어 쓴 답글도 한 본문으로
-                합칩니다.
+                타인 공개 계정 조회에는
+                <code>threads_profile_discovery</code> 권한이 필요합니다.
+                Standard Access로는 <code>@meta</code>, <code>@threads</code>,
+                <code>@instagram</code>, <code>@facebook</code> 네 개만
+                조회되고, 그 외에는 Meta 앱 심사(2~4주, 실제 서비스의 사용자
+                플로우 스크린캐스트 제출)를 통과해야 합니다. 개인용 봇은 제출할
+                사용자 플로우가 없습니다.
               </p>
             </article>
             <article class="fact">
-              <h3>키워드 후보</h3>
+              <span class="badge success">RSSHub 경유</span>
+              <h3 class="space-top-4">현재 방식</h3>
               <p>
-                <code>AI agent</code>, <code>LLM</code>, <code>OpenAI</code>,
-                <code>Claude</code>, <code>Gemini</code>의 최근 게시물을
-                검색하며 하루 최대 4개 후보로 제한하도록 설정되어 있습니다.
+                <code>rsshub.rssforever.com/threads/choi.openai</code>를 RSS로
+                읽습니다. 토큰도, 60일 갱신도, 심사도 필요 없습니다. 대신 공용
+                인스턴스라 자주 타임아웃되며, 실패하면 그날 이 출처만 빠지고
+                브리핑은 정상 발송됩니다.
               </p>
             </article>
           </div>
           <div class="callout warning" role="note">
-            <h3>다시 켜려면</h3>
+            <h3>남아 있는 코드</h3>
             <p>
-              Meta의 <code>threads_profile_discovery</code> 등 필요한 권한이
-              실제 앱에서 승인되어야 하고, 운영 토큰의 만료·갱신 방식을 관리해야
-              합니다. 이 작업이 번거롭다면 RSS 모드만으로도 봇은 정상
-              운영됩니다.
+              <code>ai_trend_bot/threads.py</code>는 본인 계정 조회를 위해
+              남겨두었습니다. 이 경로는 <code>threads_basic</code>만으로
+              동작하지만 현재 파이프라인에서는 호출하지 않습니다. 안정성이
+              필요해지면 RSSHub를 직접 띄우는 것이 다음 선택지입니다.
             </p>
           </div>
         </section>
@@ -1362,32 +1449,46 @@ flowchart TB
             <div class="section-title">
               <h2 id="operation-title">운영과 점검 방법</h2>
               <p>
-                설정 확인과 시험 실행을 거친 뒤 실제 발송을 할 수 있습니다. 시험
-                실행은 텔레그램 전송과 중복 기록을 하지 않습니다.
+                브리핑이 마음에 안 들면 코드가 아니라
+                <code>config/editorial.md</code>를 고칩니다. 한국어 산문으로 쓰인
+                편집 방침이 그대로 선별 프롬프트에 들어갑니다.
               </p>
             </div>
           </div>
           <div class="code-grid">
             <div class="code-block">
-              <h3>로컬 점검</h3>
+              <h3>기준을 고친 뒤 확인</h3>
               <pre tabindex="0" aria-label="로컬 점검 명령어"><code>uv sync
 uv run ai-trend-bot check-config
-uv run ai-trend-bot run --dry-run --limit 15</code></pre>
+uv run ai-trend-bot run --dry-run</code></pre>
             </div>
             <div class="code-block">
               <h3>실제 텔레그램 발송</h3>
-              <pre tabindex="0" aria-label="실제 텔레그램 발송 명령어"><code>uv run ai-trend-bot run --send --limit 15</code></pre>
+              <pre tabindex="0" aria-label="실제 텔레그램 발송 명령어"><code>uv run ai-trend-bot run --send</code></pre>
             </div>
           </div>
+          <p class="space-top-4">
+            드라이런은 무엇이 왜 걸러졌는지 사유와 함께 보여줍니다
+            (<code>--show-dropped</code>, 기본 켜짐). 기준이 느슨하다고 느끼면
+            편집 방침의 &ldquo;반드시 걸러낼 것&rdquo;에 항목을 추가하고, 중요한
+            걸 놓치면 &ldquo;반드시 통과시킬 것&rdquo;에 추가합니다.
+          </p>
           <h3 class="space-top-8">저장소 구조</h3>
           <pre class="repo-tree" tabindex="0" aria-label="저장소 구조">
 ai-trend-bot/
-├── ai_trend_bot/          수집·요약·저장·발송 코드
-├── config/sources.toml    출처·시간·Threads 설정
+├── ai_trend_bot/
+│   ├── feeds.py           ① 수집 · RSS/HN/HF 어댑터
+│   ├── triage.py          ② 선별 · 분류·병합·순위
+│   ├── enrich.py          ③ 심화 · 원문 본문 추출
+│   ├── telegram.py        ④ 전달 · 렌더링·분할·발송
+│   ├── gemini.py          LLM 호출 (선별·요약)
+│   └── store.py           발송 기록 읽기·쓰기
+├── config/sources.toml    27개 출처 정의
+├── config/editorial.md    편집 기준 (여기를 고칩니다)
+├── data/sent.jsonl        발송 기록 · 자동 커밋
 ├── tests/                 자동 테스트
 ├── .github/workflows/     예약 실행 정의
-├── docs/                  이 개요 문서
-├── DESIGN.md              문서 디자인 규칙
+├── docs/                  이 개요 문서와 설계 스펙
 └── README.md              실행 안내</pre>
           <section
             class="table-wrap space-top-6"
@@ -1408,8 +1509,8 @@ ai-trend-bot/
               <tbody>
                 <tr>
                   <td>pytest</td>
-                  <td>15개 테스트 통과</td>
-                  <td>설정·수집·요약·중복·Threads·CLI</td>
+                  <td>21개 테스트 통과</td>
+                  <td>설정·수집·선별·요약·기록·렌더링·CLI</td>
                 </tr>
                 <tr>
                   <td>Ruff</td>
@@ -1423,8 +1524,8 @@ ai-trend-bot/
                 </tr>
                 <tr>
                   <td>GitHub Actions</td>
-                  <td>워크플로 정의 확인</td>
-                  <td>원격 설치·예약·캐시·발송 구성</td>
+                  <td>수동 실행 성공</td>
+                  <td>발송과 기록 커밋·푸시까지 검증됨</td>
                 </tr>
               </tbody>
             </table>
@@ -1444,53 +1545,56 @@ ai-trend-bot/
           </div>
           <div class="risk-grid">
             <details open>
+              <summary>발송량이 회차마다 흔들림</summary>
+              <p>
+                실측 7건 · 14건 · 30건. 2차를 선별로 프레이밍해 최악(상한 도달)은
+                잡았지만 LLM 판단이라 편차가 남습니다. 계속 많으면 편집 방침을
+                조입니다.
+              </p>
+            </details>
+            <details>
+              <summary>Gemini 요청 크기 한계</summary>
+              <p>
+                무료 티어는 후보 300건대를 한 요청으로 받으면 503을 반환합니다.
+                100건씩 배치로 나눠 우회하고 있으며, 일시적 5xx·429는 5초 →
+                20초 → 60초로 재시도합니다.
+              </p>
+            </details>
+            <details>
+              <summary>RSSHub 공용 인스턴스 불안정</summary>
+              <p>
+                Threads 수집이 자주 타임아웃됩니다. 실패해도 그 출처만 빠집니다.
+                안정성이 필요하면 직접 띄우는 것이 해법입니다.
+              </p>
+            </details>
+            <details>
+              <summary>Anthropic · Meta AI 커버리지 공백</summary>
+              <p>
+                두 회사는 RSS를 제공하지 않아 직접 수집이 불가능합니다. 소식이
+                테크 미디어 경유로만 들어와 하루 정도 늦을 수 있습니다.
+              </p>
+            </details>
+            <details>
               <summary>예약 실행이 몇 분 늦을 수 있음</summary>
               <p>
-                GitHub Actions cron은 정확한 실시간 스케줄러가 아닙니다. 개인
-                브리핑 용도에는 허용 가능한 지연으로 봅니다.
-              </p>
-            </details>
-            <details>
-              <summary>RSS 형식이 바뀔 수 있음</summary>
-              <p>
-                특정 출처가 응답 오류를 내면 경고만 남기고 다른 출처를 계속
-                처리합니다. 장기적으로는 실패 출처 알림이 유용합니다.
-              </p>
-            </details>
-            <details>
-              <summary>Gemini 무료 할당량 영향</summary>
-              <p>
-                할당량이 줄거나 모델명이 바뀌면 요약 단계가 실패할 수 있습니다.
-                필요하면 모델과 호출량을 설정값으로 조정합니다.
-              </p>
-            </details>
-            <details>
-              <summary>Actions 캐시의 영속성 한계</summary>
-              <p>
-                캐시가 사라지면 일부 과거 항목이 다시 후보가 될 수 있습니다.
-                사용량이 커질 때만 외부 데이터 저장소를 검토하면 됩니다.
-              </p>
-            </details>
-            <details>
-              <summary>Threads 권한과 토큰 관리</summary>
-              <p>
-                Meta 검수와 토큰 갱신 부담이 실제 가치보다 크면 계속
-                비활성화하는 것이 합리적입니다.
+                GitHub Actions cron은 정확한 실시간 스케줄러가 아닙니다. 5~15분
+                지연은 정상 동작입니다.
               </p>
             </details>
             <details>
               <summary>다음으로 해볼 개선</summary>
               <p>
-                실패 알림, 소스별 일일 상한, 요약 톤 설정, 주간 회고 브리핑
-                순으로 확장하면 운영 가치가 큽니다.
+                편집 방침 실사용 튜닝, 실패 알림, 주간 회고 브리핑, 90일 초과
+                기록 정리 순으로 확장하면 운영 가치가 큽니다.
               </p>
             </details>
           </div>
           <div class="callout success" role="note">
             <h3>현재 결론</h3>
             <p>
-              추가 서버 없이 RSS 기반 봇을 운영할 수 있는 상태입니다. Threads는
-              필수 기능이 아니라 선택적 확장으로 남겨두었습니다.
+              추가 서버 없이 무료 한도 안에서 돌고 있습니다. 남은 과제는 기능이
+              아니라 <strong>편집 기준의 튜닝</strong>입니다. 며칠 받아보며
+              <code>config/editorial.md</code>를 조정하는 것이 가장 효과가 큽니다.
             </p>
           </div>
         </section>
@@ -1498,8 +1602,9 @@ ai-trend-bot/
         <footer class="footer">
           <div class="footer-inner">
             <p>
-              이 문서는 저장소의 실제 설정과 구현을 기준으로 작성되었습니다.<br />설정값이
-              바뀌면 수집처·시간·상한도 함께 갱신해야 합니다.
+              이 문서는 저장소의 실제 설정과 구현을 기준으로 작성되었습니다.<br />설계
+              배경과 결정 근거는 <code>docs/superpowers/specs/</code>의 설계
+              문서에 있습니다.
             </p>
             <a href="https://github.com/jaymunsh/ai-trend-bot"
               >GitHub 저장소 보기</a
