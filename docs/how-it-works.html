@@ -8,6 +8,7 @@
       content="AI 트렌드 봇의 현재 구현, 자동화 흐름, 수집처, 운영 일정과 Threads 보류 상태를 설명하는 프로젝트 개요 문서"
     />
     <meta name="theme-color" content="#F7F6F3" />
+    <link rel="icon" href="data:," />
     <title>AI 트렌드 봇 · 구현 및 운영 개요</title>
     <style>
       :root {
@@ -373,7 +374,16 @@
       }
       .diagram .mermaid {
         min-width: 0;
+      }
+      .diagram-scroll {
         overflow: auto;
+        border-radius: 4px;
+      }
+      .scroll-hint {
+        display: none;
+        margin: 0 0 var(--space-3);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
       }
       .diagram figcaption {
         margin-top: var(--space-5);
@@ -759,6 +769,13 @@
         .diagram {
           padding: var(--space-4);
         }
+        .diagram-wide .scroll-hint {
+          display: block;
+        }
+        .diagram-wide .mermaid > svg {
+          min-width: 760px;
+          max-width: none !important;
+        }
         .footer {
           padding-bottom: var(--space-16);
         }
@@ -854,8 +871,8 @@
           </div>
           <div class="hero-side">
             <p class="lede">
-              8개 RSS에서 새 소식을 모으고, Gemini가 한국어로 요약한 뒤 회차당
-              최대 15건을 텔레그램으로 하루 세 번 전달하는 개인용 자동화입니다.
+              8개 RSS에서 새 소식을 모으고, 출처별로 고르게 선별한 최대 15건을
+              Gemini가 한국어로 요약해 하루 세 번 전달하는 개인용 자동화입니다.
             </p>
             <div class="status-line">
               <span class="badge success">RSS 운영 중</span
@@ -896,18 +913,18 @@
               ><small>회차별 최대 15 · 15 · 15건</small>
             </article>
             <article class="metric">
-              <span class="metric-label">발송 기준</span
-              ><strong class="metric-value">새 항목</strong
-              ><small>관련도 점수와 관계없이 발송</small>
+              <span class="metric-label">출처 다양성</span
+              ><strong class="metric-value">최대 3건</strong
+              ><small>한 출처가 한 회차를 독점하지 않음</small>
             </article>
           </div>
           <div class="fact-grid">
             <article class="fact">
               <h3>완성된 기능</h3>
               <ul>
-                <li>RSS 수집과 출처별 우선순위</li>
+                <li>RSS 수집과 출처별 순환 선별</li>
                 <li>URL 해시 기반 중복 제거</li>
-                <li>Gemini 한국어 번역·2~3문장 요약</li>
+                <li>Gemini 한국어 번역·3단 심층 요약</li>
                 <li>텔레그램 메시지 묶음 발송</li>
                 <li>GitHub Actions 예약 실행과 캐시</li>
               </ul>
@@ -938,9 +955,15 @@
               </p>
             </div>
           </div>
-          <figure class="diagram">
+          <figure class="diagram diagram-wide">
             <h3>전체 아키텍처</h3>
-            <pre class="mermaid">
+            <p class="scroll-hint">다이어그램을 좌우로 이동해 전체 내용을 확인하세요.</p>
+            <section
+              class="diagram-scroll"
+              aria-label="전체 아키텍처 다이어그램"
+              tabindex="0"
+            >
+              <pre class="mermaid">
 flowchart LR
   subgraph Input[수집]
     RSS[8개 RSS 피드]
@@ -950,6 +973,7 @@ flowchart LR
     FETCH[Feed / Threads Client]
     DEDUPE[URL 해시 중복 제거\nSQLite]
     SORT[출처 우선순위·시간 정렬]
+    BALANCE[출처별 순환 선별\n최대 3건]
     AI[Gemini\n번역·요약]
   end
   subgraph Delivery[전달]
@@ -958,26 +982,33 @@ flowchart LR
   end
   RSS --> FETCH
   TH -. 권한 확보 후 .-> FETCH
-  FETCH --> DEDUPE --> SORT --> AI
+  FETCH --> DEDUPE --> SORT --> BALANCE --> AI
   AI -->|회차당 최대 15건| GROUP --> TG
   AI -->|선택 후보 처리 기록| DEDUPE</pre>
+            </section>
             <p class="diagram-fallback">
               텍스트 요약: RSS와 선택적 Threads 입력을 수집하고, SQLite로 중복을
-              제거한 뒤 우선순위로 정렬합니다. 새 항목을 최대 15건까지 Gemini가
-              한국어로 요약하고, 텔레그램 제한에 맞춰 묶어서 보냅니다.
+              제거한 뒤 우선순위로 정렬합니다. 지정 Threads 계정은 먼저 포함하고,
+              나머지는 출처마다 최대 3건씩 순환 선별해 Gemini로 요약합니다.
             </p>
             <figcaption>
               데이터는
               <strong
-                >수집 → 중복 제거 → 우선순위 정렬 → AI 요약 → 메시지 분할 →
-                발송</strong
+                >수집 → 중복 제거 → 우선순위 정렬 → 출처 균형 선별 → AI 요약 →
+                메시지 분할 → 발송</strong
               >
               순서로 흐릅니다.
             </figcaption>
           </figure>
-          <figure class="diagram">
+          <figure class="diagram diagram-wide">
             <h3>한 번의 실행이 진행되는 순서</h3>
-            <pre class="mermaid">
+            <p class="scroll-hint">다이어그램을 좌우로 이동해 전체 내용을 확인하세요.</p>
+            <section
+              class="diagram-scroll"
+              aria-label="한 번의 실행 순서 다이어그램"
+              tabindex="0"
+            >
+              <pre class="mermaid">
 sequenceDiagram
   participant GA as GitHub Actions
   participant FE as RSS 출처
@@ -988,16 +1019,18 @@ sequenceDiagram
   FE-->>GA: 최신 원문 후보
   GA->>DB: 이미 보낸 URL 확인
   DB-->>GA: 미발송 후보
+  GA->>GA: 출처별 최대 3건 순환 선별
   GA->>GM: 제목·본문·출처 전달
-  GM-->>GA: 한국어 제목·요약
+  GM-->>GA: 핵심·중요성·관련 대상 요약
   GA->>TG: 새 항목 최대 15건 묶음 발송
   TG-->>GA: 발송 대상이 있으면 완료
   GA->>DB: 발송 후보 전체 URL 해시 기록
   GA->>GA: 캐시 저장</pre>
+            </section>
             <p class="diagram-fallback">
-              텍스트 요약: GitHub Actions가 피드를 읽고 캐시에서 미발송 항목만
-              골라 Gemini에 보냅니다. 요약된 결과는 모두 텔레그램으로 전달하고,
-              이번에 처리한 후보 전체의 URL을 캐시에 기록합니다.
+              텍스트 요약: GitHub Actions가 미발송 항목을 찾은 뒤 출처별로
+              번갈아 최대 3건씩 고릅니다. 요약된 결과는 모두 텔레그램으로
+              전달하고 이번에 처리한 후보의 URL을 캐시에 기록합니다.
             </p>
             <figcaption>
               시험 실행은 실제 발송이나 중복 기록을 하지 않아 운영 데이터를
@@ -1098,7 +1131,11 @@ sequenceDiagram
               ><span class="source-type">연구 · 30점</span>
             </li>
           </ul>
-          <div class="table-wrap space-top-6">
+          <section
+            class="table-wrap space-top-6"
+            aria-label="정보 출처 표"
+            tabindex="0"
+          >
             <table>
               <caption>
                 출처 우선순위 규칙
@@ -1144,7 +1181,7 @@ sequenceDiagram
                 </tr>
               </tbody>
             </table>
-          </div>
+          </section>
         </section>
 
         <section id="quality" class="section" aria-labelledby="quality-title">
@@ -1153,38 +1190,46 @@ sequenceDiagram
             <div class="section-title">
               <h2 id="quality-title">선별과 출력 품질</h2>
               <p>
-                출처 우선순위는 후보 순서를 정합니다. 선택된 새 항목은 관련도
-                점수와 관계없이 모두 발송합니다.
+                지정 Threads 계정은 가장 먼저 포함합니다. RSS와 키워드 후보는
+                출처별 최대 3건씩 번갈아 선택해 한 출처의 과도한 편중을 막습니다.
               </p>
             </div>
           </div>
           <figure class="diagram">
             <h3>항목 생명주기</h3>
-            <pre class="mermaid">
+            <section
+              class="diagram-scroll"
+              aria-label="항목 생명주기 다이어그램"
+              tabindex="0"
+            >
+              <pre class="mermaid">
 stateDiagram-v2
   [*] --> 수집후보
   수집후보 --> 제외: URL 중복
-  수집후보 --> 요약대기: 새 항목
+  수집후보 --> 균형선별: 새 항목
+  균형선별 --> 요약대기: 출처별 최대 3건
   요약대기 --> 발송대기: 한국어 요약 완료
   발송대기 --> 처리완료: Telegram 완료
   처리완료 --> 중복기록
   중복기록 --> [*]
   제외 --> [*]</pre>
+            </section>
             <p class="diagram-fallback">
-              텍스트 요약: 중복 URL은 제외하고 새 항목을 최대 15건까지 요약해
-              텔레그램으로 보냅니다. 발송 후보는 중복 기록에 저장합니다.
+              텍스트 요약: 중복 URL은 제외하고 출처별로 고르게 새 항목을 골라
+              최대 15건까지 요약합니다. 발송 후보는 중복 기록에 저장합니다.
             </p>
             <figcaption>
-              관련도는 향후 정렬 개선을 위한 참고값으로만 유지하며 발송 항목을
-              삭제하는 기준으로 사용하지 않습니다.
+              출처가 충분하지 않으면 15건보다 적게 보낼 수 있습니다. 관련도는
+              참고값으로만 유지하며 발송 항목을 삭제하는 데 사용하지 않습니다.
             </figcaption>
           </figure>
           <div class="fact-grid">
             <article class="fact">
               <h3>텔레그램 한 항목의 형식</h3>
               <p>
-                <strong>1. 제목</strong><br />핵심 사실과 의미를 담은 한국어
-                2~3문장 요약<br />출처: 원문 제공처<br /><a
+                <strong>1. 제목</strong><br />핵심: 확인된 사실<br />왜 중요한가:
+                기술·산업적 의미<br />관련 대상: 직접 영향을 받는 구체적인 독자<br />
+                출처: 원문 제공처<br /><a
                   href="https://example.com"
                   >원문 링크</a
                 >
@@ -1239,7 +1284,12 @@ stateDiagram-v2
           </ul>
           <figure class="diagram space-top-6">
             <h3>배포 구조</h3>
-            <pre class="mermaid">
+            <section
+              class="diagram-scroll"
+              aria-label="배포 구조 다이어그램"
+              tabindex="0"
+            >
+              <pre class="mermaid">
 flowchart TB
   REPO[비공개 GitHub 저장소] --> ACTIONS[GitHub Actions\n하루 3회]
   SECRETS[GitHub Actions Secrets\nTelegram · Gemini] --> ACTIONS
@@ -1248,6 +1298,7 @@ flowchart TB
   ACTIONS --> FEEDS[공개 RSS]
   ACTIONS --> GEMINI[Gemini API]
   ACTIONS --> TELEGRAM[개인 Telegram 채팅]</pre>
+            </section>
             <p class="diagram-fallback">
               텍스트 요약: 비공개 GitHub 저장소의 Actions가 Secrets를 받아 RSS와
               Gemini를 호출하고 개인 텔레그램으로 보냅니다. 중복 기록은 Actions
@@ -1319,17 +1370,17 @@ flowchart TB
           <div class="code-grid">
             <div class="code-block">
               <h3>로컬 점검</h3>
-              <pre><code>uv sync
+              <pre tabindex="0" aria-label="로컬 점검 명령어"><code>uv sync
 uv run ai-trend-bot check-config
 uv run ai-trend-bot run --dry-run --limit 15</code></pre>
             </div>
             <div class="code-block">
               <h3>실제 텔레그램 발송</h3>
-              <pre><code>uv run ai-trend-bot run --send --limit 15</code></pre>
+              <pre tabindex="0" aria-label="실제 텔레그램 발송 명령어"><code>uv run ai-trend-bot run --send --limit 15</code></pre>
             </div>
           </div>
           <h3 class="space-top-8">저장소 구조</h3>
-          <pre class="repo-tree">
+          <pre class="repo-tree" tabindex="0" aria-label="저장소 구조">
 ai-trend-bot/
 ├── ai_trend_bot/          수집·요약·저장·발송 코드
 ├── config/sources.toml    출처·시간·Threads 설정
@@ -1338,7 +1389,11 @@ ai-trend-bot/
 ├── docs/                  이 개요 문서
 ├── DESIGN.md              문서 디자인 규칙
 └── README.md              실행 안내</pre>
-          <div class="table-wrap space-top-6">
+          <section
+            class="table-wrap space-top-6"
+            aria-label="최근 검증 기준 표"
+            tabindex="0"
+          >
             <table>
               <caption>
                 최근 검증 기준
@@ -1353,7 +1408,7 @@ ai-trend-bot/
               <tbody>
                 <tr>
                   <td>pytest</td>
-                  <td>12개 테스트 통과</td>
+                  <td>15개 테스트 통과</td>
                   <td>설정·수집·요약·중복·Threads·CLI</td>
                 </tr>
                 <tr>
@@ -1373,7 +1428,7 @@ ai-trend-bot/
                 </tr>
               </tbody>
             </table>
-          </div>
+          </section>
         </section>
 
         <section id="risks" class="section" aria-labelledby="risks-title">

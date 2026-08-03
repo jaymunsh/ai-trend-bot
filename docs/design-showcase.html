@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI 트렌드 봇 · 디자인 프리미티브</title>
+    <style>
+      :root {
+        --surface-canvas: #f7f6f3;
+        --surface-primary: #fffefc;
+        --surface-secondary: #f1f0ec;
+        --text-primary: #242628;
+        --text-secondary: #656965;
+        --text-tertiary: #5f635e;
+        --border-default: #d9d9d3;
+        --border-subtle: #e9e8e3;
+        --accent-primary: #1459c7;
+        --accent-hover: #0c439a;
+        --accent-soft: #eaf1fd;
+        --status-success: #246b45;
+        --status-success-soft: #e8f3ec;
+        --status-warning: #9b5d12;
+        --status-warning-soft: #fbf0dd;
+        --status-error: #a63a32;
+        --status-error-soft: #f9e9e7;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --space-10: 40px;
+        --space-12: 48px;
+        --space-16: 64px;
+        --font-sans:
+          ui-sans-serif, -apple-system, BlinkMacSystemFont,
+          "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        --font-serif: "Iowan Old Style", "Noto Serif KR", Georgia, serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        color-scheme: light;
+        background: var(--surface-canvas);
+      }
+      body {
+        margin: 0;
+        color: var(--text-primary);
+        background: var(--surface-canvas);
+        font: 16px/1.7 var(--font-sans);
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+      a {
+        color: inherit;
+      }
+      .shell {
+        width: min(1180px, calc(100% - 32px));
+        margin: auto;
+        padding: var(--space-16) 0;
+      }
+      .eyebrow {
+        margin: 0 0 var(--space-2);
+        color: var(--accent-primary);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.6fr);
+        gap: var(--space-12);
+        padding-bottom: var(--space-12);
+        border-bottom: 1px solid var(--border-default);
+      }
+      h1 {
+        max-width: 12ch;
+        margin: 0;
+        font: 700 clamp(2.75rem, 7vw, 5.25rem)/1.02 var(--font-serif);
+        letter-spacing: -0.045em;
+      }
+      h2 {
+        margin: var(--space-16) 0 var(--space-6);
+        font-size: 2rem;
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+      }
+      .lede {
+        align-self: end;
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 1.125rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-4);
+      }
+      .panel {
+        padding: var(--space-6);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-primary);
+      }
+      .panel h3 {
+        margin: 0 0 var(--space-3);
+        font-size: 1.125rem;
+      }
+      .metric-value {
+        display: block;
+        margin-top: var(--space-2);
+        font: 700 2rem/1.15 var(--font-serif);
+        font-variant-numeric: tabular-nums;
+      }
+      .muted {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        min-height: 28px;
+        padding: var(--space-1) var(--space-3);
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .badge::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        content: "";
+      }
+      .success {
+        color: var(--status-success);
+        background: var(--status-success-soft);
+      }
+      .success::before {
+        background: var(--status-success);
+      }
+      .warning {
+        color: var(--status-warning);
+        background: var(--status-warning-soft);
+      }
+      .warning::before {
+        background: var(--status-warning);
+      }
+      .neutral {
+        color: var(--text-secondary);
+        background: var(--surface-secondary);
+      }
+      .neutral::before {
+        background: var(--text-tertiary);
+      }
+      .callout {
+        border-left: 3px solid;
+        padding: var(--space-5);
+        background: var(--surface-primary);
+      }
+      .callout strong {
+        display: block;
+        margin-bottom: var(--space-1);
+      }
+      .info {
+        border-color: var(--accent-primary);
+        background: var(--accent-soft);
+      }
+      .error {
+        border-color: var(--status-error);
+        background: var(--status-error-soft);
+      }
+      button,
+      .toc-link {
+        min-height: 44px;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: var(--surface-primary);
+        color: var(--text-primary);
+        font: 600 0.875rem var(--font-sans);
+      }
+      button {
+        padding: 0 var(--space-4);
+        cursor: pointer;
+      }
+      button:hover,
+      .toc-link:hover {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:focus-visible,
+      .toc-link:focus-visible {
+        outline: 3px solid var(--accent-primary);
+        outline-offset: 2px;
+        border-color: var(--accent-primary);
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+      .toc-link {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: 0 var(--space-3);
+        text-decoration: none;
+      }
+      .toc-link[aria-current="page"] {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+        background: var(--accent-soft);
+      }
+      .state-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        align-items: center;
+      }
+      .skeleton {
+        width: 120px;
+        height: 14px;
+        background: var(--border-subtle);
+        border-radius: 4px;
+      }
+      .empty {
+        display: grid;
+        min-height: 140px;
+        place-items: center;
+        border: 1px dashed var(--border-default);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        text-align: center;
+      }
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        background: var(--surface-primary);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 620px;
+      }
+      caption {
+        padding: var(--space-4);
+        text-align: left;
+        font-weight: 700;
+      }
+      th,
+      td {
+        padding: var(--space-3) var(--space-4);
+        border-top: 1px solid var(--border-subtle);
+        text-align: left;
+        font-size: 0.875rem;
+      }
+      th {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+      }
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border-top: 1px solid var(--text-primary);
+      }
+      .timeline li {
+        position: relative;
+        padding: var(--space-5) var(--space-4) 0;
+      }
+      .timeline li::before {
+        position: absolute;
+        top: -6px;
+        left: var(--space-4);
+        width: 10px;
+        height: 10px;
+        border: 2px solid var(--accent-primary);
+        border-radius: 50%;
+        background: var(--surface-canvas);
+        content: "";
+      }
+      .timeline time {
+        display: block;
+        color: var(--accent-primary);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 760px) {
+        .shell {
+          padding: var(--space-10) 0;
+        }
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .lede {
+          max-width: 42rem;
+        }
+        .grid {
+          gap: var(--space-3);
+        }
+        .timeline {
+          grid-template-columns: 1fr;
+          border-top: 0;
+          border-left: 1px solid var(--text-primary);
+        }
+        .timeline li {
+          padding: 0 0 var(--space-6) var(--space-6);
+        }
+        .timeline li::before {
+          top: 7px;
+          left: -6px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Design system gate</p>
+          <h1>작게 만들고, 명확하게 읽힌다.</h1>
+        </div>
+        <p class="lede">
+          최종 문서에서 반복할 상태, 수치, 표, 타임라인과 탐색 요소를 먼저
+          검증하는 프리미티브 쇼케이스입니다.
+        </p>
+      </header>
+      <section aria-labelledby="status-title">
+        <h2 id="status-title">상태와 수치</h2>
+        <div class="grid">
+          <article class="panel">
+            <span class="badge success">운영 중</span
+            ><span class="metric-value">8개</span
+            ><span class="muted">현재 활성 RSS 출처</span>
+          </article>
+          <article class="panel">
+            <span class="badge warning">보류</span
+            ><span class="metric-value">3회</span
+            ><span class="muted">하루 예약 발송</span>
+          </article>
+          <article class="panel">
+            <span class="badge neutral">상한</span
+            ><span class="metric-value">20건</span
+            ><span class="muted">하루 최대 후보 수</span>
+          </article>
+        </div>
+      </section>
+      <section aria-labelledby="interaction-title">
+        <h2 id="interaction-title">상호작용 상태</h2>
+        <div class="panel">
+          <div class="state-row">
+            <a class="toc-link" href="#tables"><span>01</span>기본 링크</a
+            ><a class="toc-link" href="#tables" aria-current="page"
+              ><span>02</span>현재 위치</a
+            ><button type="button">기본 버튼</button
+            ><button type="button" disabled>사용 불가</button
+            ><span
+              class="skeleton"
+              role="status"
+              aria-label="불러오는 중"
+            ></span>
+          </div>
+        </div>
+      </section>
+      <section aria-labelledby="feedback-title">
+        <h2 id="feedback-title">피드백과 빈 상태</h2>
+        <div class="grid">
+          <div class="callout info" role="note">
+            <strong>정보</strong>Mermaid가 준비되는 동안에도 설명 문장은 그대로
+            읽을 수 있습니다.
+          </div>
+          <div class="callout error" role="note">
+            <strong>오류 예시</strong>수집 실패 시 해당 출처만 경고로 남기고
+            다음 출처를 계속 처리합니다.
+          </div>
+          <div class="empty">
+            새 항목이 없으면<br />텔레그램을 보내지 않습니다.
+          </div>
+        </div>
+      </section>
+      <section id="tables" aria-labelledby="tables-title">
+        <h2 id="tables-title">표와 시간축</h2>
+        <div class="table-wrap">
+          <table>
+            <caption>
+              출처 레지스트리 예시
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">출처</th>
+                <th scope="col">유형</th>
+                <th scope="col">우선순위</th>
+                <th scope="col">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>OpenAI News</td>
+                <td>공식 RSS</td>
+                <td>80</td>
+                <td>활성</td>
+              </tr>
+              <tr>
+                <td>choi.openai</td>
+                <td>Threads 계정</td>
+                <td>100</td>
+                <td>권한 대기</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ol class="timeline">
+          <li><time>08:17</time><strong>1차 · 최대 8건</strong></li>
+          <li><time>14:17</time><strong>2차 · 최대 6건</strong></li>
+          <li><time>20:17</time><strong>3차 · 최대 6건</strong></li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>
