@@ -130,6 +130,7 @@ class GeminiClient:
         *,
         editorial: str,
         recent_events: Sequence[str],
+        guidance: str = "",
     ) -> tuple[Verdict, ...]:
         """Classify, deduplicate and rank candidates in one pass.
 
@@ -154,6 +155,7 @@ class GeminiClient:
             "위 '이미 보낸 사건'의 재탕이나 후속 보도면 false.\n"
             "- reason: 판정 이유를 한 문장으로. 탈락시킨 경우 특히 구체적으로.\n"
             "- rank: 중요한 순서대로 1부터. 서로 비교해서 매기세요.\n\n"
+            f"{guidance}"
             "모든 입력 항목을 빠짐없이 반환하고 입력의 index를 그대로 유지하세요. JSON만 반환하세요.\n"
             f"입력: {json.dumps(input_items, ensure_ascii=False)}"
         )

@@ -9,7 +9,11 @@ import httpx2
 from ai_trend_bot.models import DigestItem
 
 SEOUL: Final = ZoneInfo("Asia/Seoul")
+# Telegram rejects sendMessage over 4096 characters. The margin absorbs HTML entity
+# expansion (&#x27; is 6 characters for one quote) that is invisible in the source text.
 TELEGRAM_SAFE_LENGTH: Final = 3_800
+# Width reserved for the " [10/10]" counter appended to split messages.
+COUNTER_RESERVE: Final = 10
 DIVIDER: Final = "────────────────"
 SEPARATOR: Final = f"\n\n{DIVIDER}\n\n"
 WEEKDAYS: Final = ("월", "화", "수", "목", "금", "토", "일")
@@ -61,7 +65,10 @@ def render_digest_chunks(
     Pairing lets the caller record delivery per message, so a failure partway
     through does not re-send what already arrived.
     """
-    room = max_length - len(header) - len(SEPARATOR)
+    # The "[1/3]" counter is appended after splitting, once the total is known, so its
+    # width is reserved up front rather than pushing a finished message over the limit.
+    budget = max_length - COUNTER_RESERVE
+    room = budget - len(header) - len(SEPARATOR)
     chunks: list[tuple[str, tuple[DigestItem, ...]]] = []
     sections: list[str] = []
     carried: list[DigestItem] = []
@@ -69,14 +76,25 @@ def render_digest_chunks(
         # ponytail: truncate a single oversized section rather than splitting it across
         # messages, which would break its HTML tags. Revisit if summaries reach ~3KB.
         section = _section(index, item)[:room]
-        if sections and len(SEPARATOR.join((header, *sections, section))) > max_length:
+        if sections and len(SEPARATOR.join((header, *sections, section))) > budget:
             chunks.append((SEPARATOR.join((header, *sections)), tuple(carried)))
             sections, carried = [], []
         sections.append(section)
         carried.append(item)
     if sections:
         chunks.append((SEPARATOR.join((header, *sections)), tuple(carried)))
-    return tuple(chunks)
+    if len(chunks) == 1:
+        return tuple(chunks)
+    return tuple(
+        (_number_header(message, position, len(chunks)), carried_items)
+        for position, (message, carried_items) in enumerate(chunks, start=1)
+    )
+
+
+def _number_header(message: str, position: int, total: int) -> str:
+    """Mark a split message as `[1/3]` at the end of the header's first line."""
+    first, separator, rest = message.partition("\n")
+    return f"{first} [{position}/{total}]{separator}{rest}"
 
 
 @final

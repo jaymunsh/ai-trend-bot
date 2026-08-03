@@ -20,6 +20,16 @@ from ai_trend_bot.triage import Dropped, Selection, apply_triage
 
 # Free-tier Gemini answers 503 to a few hundred candidates in one request; 100 is served reliably.
 TRIAGE_BATCH: Final = 100
+# The first round judges each item on its own merits, which is the right question when
+# screening hundreds. Asked the same way twice, the second round just re-approves nearly
+# everything, so it is framed as picking a lineup instead.
+FINAL_ROUND_GUIDANCE: Final = (
+    "\n이것은 최종 선별입니다. 위 후보는 이미 1차를 통과한 것들이므로 개별적으로는 모두 그럴듯해 보입니다. "
+    "지금 할 일은 재심사가 아니라 **오늘 브리핑에 실을 것을 고르는 것**입니다. "
+    "하루 세 번 발송하므로 한 회차에 실리는 것은 보통 3~8건입니다. "
+    "서로 비교했을 때 상대적으로 약한 것, 같은 회사의 사소한 업데이트, "
+    "같은 사건의 다른 측면을 다룬 것은 keep=false로 떨어뜨리세요. 애매하면 버립니다.\n"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,7 +128,12 @@ class BotPipeline:
         if len(batches) == 1:
             return Selection(kept=screened[0].kept[:limit], dropped=dropped)
 
-        final = await self._clients.gemini.triage(survivors, editorial=editorial, recent_events=recent)
+        final = await self._clients.gemini.triage(
+            survivors,
+            editorial=editorial,
+            recent_events=recent,
+            guidance=FINAL_ROUND_GUIDANCE,
+        )
         settled = apply_triage(survivors, final, limit=limit)
         return Selection(kept=settled.kept, dropped=(*dropped, *settled.dropped))
 

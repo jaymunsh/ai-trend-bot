@@ -97,3 +97,28 @@ def test_raw_and_digest_key_match_for_same_url() -> None:
 
     # When / Then
     assert raw.key == digest.key
+
+
+def test_split_messages_are_numbered() -> None:
+    # Given
+    header = render_header(datetime(2026, 8, 3, 7, 30, tzinfo=SEOUL), 3)
+    items = tuple(_item(index, "긴 요약입니다. " * 20) for index in range(3))
+
+    # When
+    chunks = render_digest_chunks(items, header, max_length=320)
+
+    # Then
+    assert [message.splitlines()[0][-5:] for message, _ in chunks] == ["[1/3]", "[2/3]", "[3/3]"]
+    # The counter is added after splitting, so it must still fit the limit.
+    assert all(len(message) <= 320 for message, _ in chunks)
+
+
+def test_single_message_is_not_numbered() -> None:
+    # Given
+    header = render_header(datetime(2026, 8, 3, 7, 30, tzinfo=SEOUL), 1)
+
+    # When
+    ((message, _),) = render_digest_chunks((_item(1),), header)
+
+    # Then
+    assert "[1/1]" not in message
