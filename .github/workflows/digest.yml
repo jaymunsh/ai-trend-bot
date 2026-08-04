@@ -2,10 +2,18 @@ name: AI trend digest
 
 on:
   schedule:
-    # 07:30 / 13:30 / 19:30 Asia/Seoul (UTC+9)
-    - cron: "30 22 * * *"
-    - cron: "30 4 * * *"
-    - cron: "30 10 * * *"
+    # 07:23 / 13:23 / 19:23 Asia/Seoul (UTC+9). Odd minutes: GitHub queues far more
+    # jobs on :00 and :30, and a scheduled run that backs up long enough is dropped.
+    - cron: "23 22 * * *"
+    - cron: "23 4 * * *"
+    - cron: "23 10 * * *"
+    # Backups ~50 minutes later, because GitHub drops scheduled runs under load and
+    # did so on 2026-08-04. No guard against double sends: sent.jsonl already excludes
+    # anything delivered, so a backup after a successful run finds nothing and sends
+    # nothing.
+    - cron: "11 23 * * *"
+    - cron: "11 5 * * *"
+    - cron: "11 11 * * *"
   workflow_dispatch:
 
 permissions:
