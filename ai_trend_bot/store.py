@@ -1,5 +1,5 @@
 import json
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import ClassVar, final
@@ -34,27 +34,27 @@ class SentLog:
         self._keys = self._load()
 
     def _load(self) -> set[str]:
-        if not self._path.exists():
-            return set()
-        with self._path.open(encoding="utf-8") as log:
-            return {SentRecord.model_validate_json(line).key for line in log if line.strip()}
+        return {record.key for record in self._records()}
 
     def unseen(self, keys: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(key for key in keys if key not in self._keys)
 
-    def recent_events(self, *, days: int = 14) -> tuple[str, ...]:
-        """Event summaries from recent sends, so triage can spot follow-up coverage."""
+    def last_sent_at(self) -> datetime | None:
+        """When the most recent item went out, or None if nothing ever has."""
+        return max((record.sent_at for record in self._records()), default=None)
+
+    def _records(self) -> Iterator[SentRecord]:
         if not self._path.exists():
-            return ()
-        cutoff = datetime.now(tz=UTC) - timedelta(days=days)
-        events: list[str] = []
+            return
         with self._path.open(encoding="utf-8") as log:
             for line in log:
-                if not line.strip():
-                    continue
-                record = SentRecord.model_validate_json(line)
-                if record.event and record.sent_at >= cutoff:
-                    events.append(record.event)
+                if line.strip():
+                    yield SentRecord.model_validate_json(line)
+
+    def recent_events(self, *, days: int = 14) -> tuple[str, ...]:
+        """Event summaries from recent sends, so triage can spot follow-up coverage."""
+        cutoff = datetime.now(tz=UTC) - timedelta(days=days)
+        events = [r.event for r in self._records() if r.event and r.sent_at >= cutoff]
         return tuple(dict.fromkeys(events))
 
     def mark(self, items: Sequence[DigestItem]) -> None:

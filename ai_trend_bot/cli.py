@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Final
 
@@ -68,8 +69,12 @@ def run_digest(
     limit: Annotated[int, typer.Option("--limit", min=1, max=40)] = 30,
     dry_run: Annotated[bool, typer.Option("--dry-run/--send")] = True,
     show_dropped: Annotated[bool, typer.Option("--show-dropped/--no-show-dropped")] = True,
+    min_gap_hours: Annotated[float, typer.Option("--min-gap-hours", min=0)] = 0,
 ) -> None:
     """Collect, triage, summarize, and optionally send one digest run."""
+    if not dry_run and _sent_within(min_gap_hours):
+        console.print(f"[yellow]최근 {min_gap_hours:g}시간 안에 발송한 기록이 있어 건너뜁니다.[/yellow]")
+        return
     settings = CliRunSettings(config_path=config, limit=limit, dry_run=dry_run, show_dropped=show_dropped)
     try:
         result = anyio.run(_execute, settings)
@@ -83,6 +88,10 @@ def run_digest(
         console.print(f"[red]응답 처리 오류:[/red] {error}")
         raise typer.Exit(code=1) from error
 
+    _report(settings, result)
+
+
+def _report(settings: CliRunSettings, result: RunResult) -> None:
     for warning in result.warnings:
         console.print(f"[yellow]건너뜀:[/yellow] {warning}")
     if settings.dry_run and settings.show_dropped:
@@ -99,6 +108,19 @@ def run_digest(
         console.print(f"\n[cyan]드라이런 완료: 후보 {result.candidates}건 → 발송 대상 {len(result.items)}건[/cyan]")
     else:
         console.print(f"[green]텔레그램 발송 완료: 후보 {result.candidates}건 → {len(result.items)}건[/green]")
+
+
+def _sent_within(hours: float) -> bool:
+    """Whether a digest already went out inside the window.
+
+    Backup crons exist because GitHub drops scheduled runs, but candidates are
+    "everything unsent", not "new since the last run" — so an unguarded backup
+    picks the next best few and sends a second full briefing every time.
+    """
+    if hours <= 0:
+        return False
+    last = SentLog(SENT_LOG_PATH).last_sent_at()
+    return last is not None and datetime.now(tz=UTC) - last < timedelta(hours=hours)
 
 
 async def _execute(settings: CliRunSettings) -> RunResult:

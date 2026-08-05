@@ -37,7 +37,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: uv run ai-trend-bot run --send --limit 30
+        # Backups fire ~50 min after each slot; skip if that slot already delivered.
+        run: uv run ai-trend-bot run --send --limit 30 --min-gap-hours 3
       - name: Commit send log
         if: always()
         run: |
