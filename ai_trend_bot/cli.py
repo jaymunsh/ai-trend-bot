@@ -101,7 +101,9 @@ def run_digest(
 def _report(settings: CliRunSettings, result: RunResult) -> None:
     for warning in result.warnings:
         console.print(f"[yellow]건너뜀:[/yellow] {warning}")
-    if settings.dry_run and settings.show_dropped:
+    # 발송 회차에도 찍는다. 드라이런은 다른 시각의 다른 후보 집합을 보므로,
+    # "이 브리핑이 무엇을 버렸는가"에는 그 회차 자신만 답할 수 있다.
+    if settings.show_dropped:
         console.print(f"\n[dim]── 탈락 {len(result.dropped)}건 ──[/dim]")
         for drop in result.dropped:
             console.print(f"· {drop.item.title[:60]} — {drop.reason}", style="dim", markup=False)
