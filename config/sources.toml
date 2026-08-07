@@ -1,6 +1,6 @@
 [delivery]
 timezone = "Asia/Seoul"
-send_times = ["07:23", "13:23", "19:23"]
+send_times = ["07:30", "13:30", "19:30"]
 per_source_max = 3
 
 [threads]

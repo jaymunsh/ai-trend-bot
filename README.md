@@ -7,76 +7,110 @@ AI 관련 소식을 모아 한국어로 요약하고 텔레그램으로 보내�
 
 ## 운영 기준
 
-- 발송: 매일 07:23, 13:23, 19:23 (Asia/Seoul). 각 회차마다 약 50분 뒤 백업 실행이 한 번 더 걸립니다
+- 발송: 매일 07:30, 13:30, 19:30 (Asia/Seoul). **miniPC의 cron이 실행합니다**
 - 중복 게시물은 다시 보내지 않음
 - 현재 운영 모드: RSS 뉴스 중심
 - 발송 개수는 **가변**입니다. 편집 기준을 통과한 것만 보내며, 통과분이 없으면 보내지 않습니다.
   `--limit`(기본 30, 최대 40)은 목표치가 아니라 폭주 방지선입니다.
 
-**GitHub Actions의 예약 실행은 보장되지 않습니다.** best-effort 큐라서 부하가 높으면
-지연되고, 지연이 다음 슬롯까지 밀리면 아예 버려집니다. 실제로 30~150분 지연이 흔하고,
-2026-08-04 13:23 회차는 트리거 자체가 걸리지 않았습니다. 그래서 회차마다 약 50분 뒤
-백업 cron을 하나씩 더 둡니다.
+**GitHub Actions는 더 이상 예약 실행하지 않습니다.** `schedule`이 best-effort 큐라서
+2026-08-05~07 관측 기준 +63~193분 지연이 일상이었고, 지연이 다음 슬롯까지 밀리면 아예
+버려졌습니다. 아침 브리핑이 점심에 오는 것이 정상 상태였습니다. 2026-08-07에 실행을
+miniPC로 옮겼고 근거는
+[`docs/superpowers/specs/2026-08-07-minipc-execution-design.md`](docs/superpowers/specs/2026-08-07-minipc-execution-design.md)에 있습니다.
 
-백업 실행은 **최근 3시간 안에 발송한 기록이 있으면 건너뜁니다**
-(`--min-gap-hours 3`). 이 가드가 없으면 백업이 매번 두 번째 브리핑을 보냅니다.
-후보가 "지난 실행 이후 새로 올라온 것"이 아니라 **"아직 안 보낸 것 전부"**이기 때문입니다.
-300건 중 6건을 보내도 294건이 남고, 백업은 그 중 상위 몇 건을 또 골라 보냅니다.
-정규 회차는 6시간 간격이라 이 가드에 걸리지 않습니다.
+`--min-gap-hours 3`은 유지합니다. cron이 어떤 이유로 두 번 발사되어도 두 번째 브리핑이
+나가지 않게 막습니다. 후보가 "지난 실행 이후 새로 올라온 것"이 아니라 **"아직 안 보낸 것
+전부"**여서, 이 가드가 없으면 재실행이 매번 상위 몇 건을 또 골라 보냅니다. 정규 회차는
+6시간 간격이라 이 가드에 걸리지 않습니다.
 
 한 회차를 통째로 놓쳐도 항목이 사라지지는 않습니다. 중복 판정이 시각이 아니라 URL
 기준이라, 다음 회차가 그대로 후보로 잡습니다.
 
-## 정시 발송이 필요하면
+## miniPC 실행
 
-GitHub 예약은 실행을 통째로 폐기하는 일이 있습니다(아래 1번). 상시 켜져 있는 서버가
-있다면 그쪽 crontab에서 `workflow_dispatch`를 호출하는 편이 확실합니다. 예약 큐를 타지
-않아 즉시 실행됩니다. 서버에는 봇을 배포하지 않고 `curl` 한 줄만 둡니다.
+정규 발송은 miniPC에서 돕니다. GitHub은 코드를 받아오는 창구로만 씁니다.
 
-절차는 [`docs/server-trigger-handoff.md`](docs/server-trigger-handoff.md)에 있습니다.
-그대로 넘기면 서버 쪽에서 바로 작업할 수 있습니다.
+| 위치 | 무엇 |
+| --- | --- |
+| `~/apps/ai-trend-bot` | clone. 읽기 전용 |
+| `~/.ssh/ai-trend-bot` | read-only deploy key. `~/.ssh/config`의 `github-ai-trend-bot` 별칭이 씁니다 |
+| `~/.config/ai-trend-bot.env` | 시크릿 3개 (0600) |
+| `~/bin/run-digest.sh` | `scripts/run-digest.sh` 사본 |
+| `~/.local/state/ai-trend-bot/sent.jsonl` | 발송 기록. 저장소 밖 |
+| `~/logs/ai-trend-bot.log` | 실행 결과 |
+
+```bash
+crontab -l                          # 30 7,13,19 * * * ~/bin/run-digest.sh ...
+tail -5 ~/logs/ai-trend-bot.log     # 회차마다 "<시각> done"
+```
+
+실측 기준 한 회차가 **80초, 최대 RSS 96MB, CPU 5%**이고 설치 용량은 약 436MB입니다.
+상시 실행되는 프로세스는 없습니다.
+
+코드를 고쳤으면 `main`에 머지만 하면 됩니다. 스크립트가 실행 전에 `git pull --ff-only`를 합니다.
+`scripts/run-digest.sh` 자체를 고쳤을 때만 `~/bin/`으로 다시 복사해야 합니다.
+
+miniPC가 죽으면 그 회차는 오지 않습니다. GitHub Actions에서 `workflow_dispatch`를 수동으로
+누르면 보낼 수 있지만, 그쪽은 저장소의 오래된 `data/sent.jsonl`을 보므로 **중복이 갈 수 있습니다.**
 
 ## 브리핑이 안 왔을 때
 
-먼저 실행이 걸렸는지부터 봅니다.
+miniPC의 로그부터 봅니다. GitHub Actions는 이제 관계가 없습니다.
 
 ```bash
-gh run list --workflow digest.yml -L 10
+ssh miniPC 'tail -20 ~/logs/ai-trend-bot.log'
 ```
 
-- **목록에 아예 없다** → 트리거가 안 걸린 것. 아래 표의 1~6번
-- **`failure`로 있다** → 실행은 됐고 job이 죽은 것. 7번. 로그를 보면 어디서 죽었는지 나옵니다
+- **해당 회차 줄이 아예 없다** → cron이 안 돈 것. 아래 표의 1~3번
+- **줄은 있는데 `done`이 없다** → 실행 중 죽은 것. 4~6번
+- **`done`은 있는데 텔레그램이 조용하다** → 7번. 대개 정상입니다
 
 | # | 원인 | 확인·대응 |
 | --- | --- | --- |
-| 1 | **고부하로 폐기** | 가장 흔합니다. `schedule`은 큐에 밀리다 다음 슬롯 근처까지 가면 버려집니다. 실패가 아니라 기록 자체가 안 남습니다. 백업 cron이 이걸 겨냥한 것이고, 그래도 계속 새면 외부 크론으로 `workflow_dispatch`를 호출하면 됩니다 (예약 큐를 타지 않아 이 문제가 사라집니다) |
-| 2 | 저장소 60일 무활동 | 예약이 자동 비활성화됩니다. 매일 기록을 커밋하므로 해당 없음 |
-| 3 | 기본 브랜치가 아닌 곳의 워크플로 | `schedule`은 `main`의 파일만 봅니다. 다른 브랜치에서 cron을 고쳐도 머지 전엔 무의미합니다 |
-| 4 | Actions 무료 분 소진 | 비공개 저장소 월 2,000분. 하루 6회 기준 월 400분대라 여유 있음. Settings → Billing에서 확인 |
-| 5 | `concurrency` 그룹 충돌 | 대기가 쌓이면 오래된 대기 건이 취소됩니다. 실행 2~3분에 백업은 50분 뒤라 부딪힐 일은 거의 없음 |
-| 6 | 워크플로 수동 비활성화 | `gh api /repos/<owner>/<repo>/actions/workflows`로 `state` 확인 |
-| 7 | job 실패 | Gemini가 재시도 세 번 뒤에도 5xx, 네트워크 오류, 커밋 푸시 권한 문제 등 |
+| 1 | miniPC 다운·재부팅 | `ssh miniPC uptime`. 그 회차는 오지 않습니다. 복구 후 `~/bin/run-digest.sh`를 직접 돌리면 됩니다 |
+| 2 | crontab 유실 | `ssh miniPC crontab -l`에 `30 7,13,19` 줄이 있는지 |
+| 3 | cron 서비스 정지 | `systemctl is-active cron` |
+| 4 | 시크릿 파일 문제 | `ls -l ~/.config/ai-trend-bot.env`가 0600인지. 값이 틀리면 텔레그램 401이 로그에 남습니다 |
+| 5 | Gemini 5xx·429 | 로그에 `외부 API 오류: HTTP <코드>`. 재시도 세 번 뒤에도 실패한 경우입니다 |
+| 6 | `설정 파일을 찾을 수 없습니다` | 스크립트의 `cd "$REPO"`가 빠진 것. `sources.toml`은 CWD 상대 경로로 열립니다 |
+| 7 | 편집 기준 통과 0건 | 로그에 `기준을 통과한 항목이 없습니다`. 보낼 게 없으면 보내지 않습니다 |
+
+`git pull 실패`가 로그에 있어도 발송 자체는 진행됩니다. 그 회차는 이전 코드로 돈 것입니다.
 
 **어느 경우든 항목이 사라지지는 않습니다.** 중복 판정이 시각이 아니라 URL 기준이라,
 한 회차를 통째로 놓쳐도 다음 회차가 그대로 후보로 잡습니다. 그날은 평소보다 많이 옵니다.
 
 ## 데이터 저장
 
-발송한 항목은 **`data/sent.jsonl`에 한 줄씩 기록하고 저장소에 커밋합니다.**
-매 실행 후 Actions가 자동으로 커밋·푸시하므로 이 파일은 절대 수동으로 편집하지 마세요.
+발송한 항목을 JSONL로 한 줄씩 기록합니다. **이 파일 하나가 유일한 상태입니다.** DB도 캐시도 없습니다.
 
 ```jsonc
-{"key": "<URL의 sha256>", "title": "...", "url": "...", "source": "...", "sent_at": "..."}
+{"key": "<URL의 sha256>", "title": "...", "url": "...", "source": "...", "category": "...", "event": "...", "sent_at": "..."}
 ```
 
-- `key`가 재발송 차단의 기준입니다. 파일이 사라지면 **이미 보낸 항목이 전부 재발송됩니다.**
+경로는 `AI_TREND_BOT_SENT_LOG`로 정하고, 값이 없으면 `data/sent.jsonl`로 떨어집니다.
+**miniPC는 `~/.local/state/ai-trend-bot/sent.jsonl`을 씁니다.** clone을 읽기 전용으로 유지하려는
+것입니다. 저장소의 `data/sent.jsonl`은 2026-08-07 이관 시점 스냅샷이며 더는 갱신되지 않습니다.
+
+세 곳에서 읽습니다. 중복 방지 로그이면서 요약 품질에도 물려 있습니다.
+
+| 읽는 곳 | 범위 | 없으면 |
+| --- | --- | --- |
+| `unseen()` | 전 기간의 `key` | 이미 보낸 항목을 다시 보냅니다 |
+| `last_sent_at()` | 마지막 1줄 | 회차 중복 방지가 풀립니다 |
+| `recent_events(days=14)` | 최근 14일의 `event` | triage가 후속 보도를 새 소식으로 봅니다 |
+
 - 기록은 텔레그램 메시지 하나가 실제로 전달된 뒤에만 남습니다. 여러 메시지로 쪼개져 나가다
   중간에 실패해도, 이미 도착한 것은 다시 오지 않습니다.
 - 이전에는 SQLite 파일을 GitHub Actions 캐시에 두었으나, 캐시는 7일 미사용·용량 초과로
-  evict되며 그때마다 대량 재발송이 발생합니다. 그래서 git으로 옮겼습니다.
-- 용량은 연 2MB 수준입니다. 커지면 오래된 줄부터 잘라내면 됩니다.
+  evict되며 그때마다 대량 재발송이 발생합니다. 그래서 파일로 옮겼습니다.
+- 실측 407B/줄, 하루 약 24줄, **연 3.4MB**입니다. 가지치기는 없습니다. 커지면 오래된 줄부터
+  잘라내면 됩니다.
+- 백업은 두지 않습니다. 날아가면 중복 브리핑이 한 번 가고 2주간 triage 맥락이 비지만,
+  둘 다 자가 복구됩니다.
 
-탈락 항목과 그 사유는 저장소에 커밋하지 않습니다. 드라이런에서 터미널로 확인하세요
+탈락 항목과 그 사유는 저장하지 않습니다. 드라이런에서 터미널로 확인하세요
 (`--show-dropped`, 기본 켜짐).
 
 ## 설정
@@ -90,11 +124,12 @@ uv run ai-trend-bot run --dry-run --limit 30   # 발송 없이 결과만 확인
 uv run ai-trend-bot run --send --limit 30      # 실제 발송
 ```
 
-`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GEMINI_API_KEY`를 GitHub Actions Secrets에
-등록해야 자동 실행이 동작합니다. 로컬에서는 `.env.example`을 `.env`로 복사해 값을 넣습니다.
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GEMINI_API_KEY`가 필요합니다. miniPC는
+`~/.config/ai-trend-bot.env`에서, 로컬에서는 `.env.example`을 `.env`로 복사해 읽습니다.
+수동 `workflow_dispatch`를 쓰려면 GitHub Actions Secrets에도 같은 값이 있어야 합니다.
 **발급받은 키를 채팅이나 저장소에 직접 올리지 마세요.**
 
-Actions가 `data/sent.jsonl`을 푸시해야 하므로 워크플로에 `contents: write` 권한이 필요합니다.
+수동 실행 시 `data/sent.jsonl`을 푸시하므로 워크플로에 `contents: write` 권한이 필요합니다.
 
 ## 파이프라인
 
@@ -139,7 +174,7 @@ Actions가 `data/sent.jsonl`을 푸시해야 하므로 워크플로에 `contents
 ## 브리핑 형식
 
 ```
-🌅  AI 트렌드 브리핑 · 아침 07:23        ← "AI 트렌드 브리핑"만 굵게
+🌅  AI 트렌드 브리핑 · 아침 07:30        ← "AI 트렌드 브리핑"만 굵게
 8월 3일 (월) · 3건
 
 ────────────────
@@ -184,8 +219,8 @@ uv run ai-trend-bot run --dry-run
 - [x] RSS 수집
 - [x] Gemini 한국어 번역·요약
 - [x] 텔레그램 발송 (HTML, 회차별 헤더, 출처 하이퍼링크)
-- [x] 발송 기록을 저장소에 커밋 (`data/sent.jsonl`)
-- [x] GitHub Actions 3회 예약 실행 (+ 회차별 백업 cron)
+- [x] 발송 기록 파일 (`AI_TREND_BOT_SENT_LOG`, 기본 `data/sent.jsonl`)
+- [x] miniPC cron 3회 실행 (2026-08-07 이관. 이전에는 GitHub Actions 예약)
 - [x] 선별 계층 (분류·사건 병합·후속 판정·순위)
 - [x] 원문 본문 추출 후 심층 요약
 - [x] 수집처 27개 (벤더 공식·테크 미디어·큐레이터·HN·Hugging Face·arXiv·국내·Threads)
