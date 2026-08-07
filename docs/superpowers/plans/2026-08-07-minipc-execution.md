@@ -246,7 +246,7 @@ git push origin main
 - [ ] **Step 1: 타임존과 기존 crontab을 확인한다**
 
 Run: `ssh miniPC 'timedatectl; echo ---; crontab -l'`
-Expected: `Time zone:` 줄을 읽어 Step 7에서 쓸 crontab 줄을 고른다. 기존 항목과 충돌이 없는지 본다.
+Expected: `Time zone:` 줄을 읽어 **Task 4 Step 3**에서 쓸 crontab 줄을 고른다. 기존 항목과 충돌이 없는지 본다.
 
 - [ ] **Step 2: uv를 설치한다**
 
@@ -259,18 +259,61 @@ ssh miniPC '~/.local/bin/uv --version'
 
 Expected: 버전 문자열이 나온다.
 
-- [ ] **Step 3: 저장소를 clone한다**
+- [ ] **Step 3: read-only deploy key를 만들어 등록한다**
 
-비공개 저장소이므로 miniPC의 git 자격증명이 필요하다. `gh auth status`로 먼저 확인한다.
+비공개 저장소라 clone에 인증이 필요하다. 계정 전체에 권한이 붙는 PAT 대신 **이 저장소 하나에만
+붙는 읽기 전용 deploy key**를 쓴다. 쓰기를 안 주므로 miniPC에서 push가 구조적으로 불가능하고,
+만료도 없다.
 
 ```bash
-ssh miniPC 'mkdir -p ~/apps && cd ~/apps && git clone https://github.com/jaymunsh/ai-trend-bot.git'
-ssh miniPC 'cd ~/apps/ai-trend-bot && git log --oneline -1'
+ssh miniPC 'ssh-keygen -t ed25519 -f ~/.ssh/ai-trend-bot -N "" -C "minipc-ai-trend-bot"'
+ssh miniPC 'cat ~/.ssh/ai-trend-bot.pub'
 ```
 
-Expected: Task 2의 커밋이 보인다.
+출력된 공개키를 `https://github.com/jaymunsh/ai-trend-bot/settings/keys` → **Add deploy key**에
+붙인다. Title은 `minipc`. **`Allow write access`는 체크하지 않는다.**
 
-- [ ] **Step 4: 시크릿 파일을 만든다**
+이 키로만 github.com에 붙도록 SSH 설정을 넣는다. miniPC에는 jay-wiki 러너도 있으므로
+호스트 별칭을 따로 둬서 서로 간섭하지 않게 한다.
+
+```bash
+ssh miniPC 'cat >> ~/.ssh/config <<EOF
+
+Host github-ai-trend-bot
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/ai-trend-bot
+  IdentitiesOnly yes
+EOF
+chmod 600 ~/.ssh/config'
+```
+
+연결을 확인한다.
+
+Run: `ssh miniPC 'ssh -T git@github-ai-trend-bot 2>&1 | head -1'`
+Expected: `Hi jaymunsh/ai-trend-bot! You've successfully authenticated, but GitHub does not provide shell access.`
+`Permission denied`가 나오면 deploy key 등록이 안 된 것이다.
+
+- [ ] **Step 4: 저장소를 clone한다**
+
+위에서 만든 별칭으로 clone한다. 이렇게 하면 `origin`이 별칭을 가리켜 `git pull`이 계속 이 키를 쓴다.
+
+```bash
+ssh miniPC 'mkdir -p ~/apps && cd ~/apps && \
+  git clone github-ai-trend-bot:jaymunsh/ai-trend-bot.git'
+ssh miniPC 'cd ~/apps/ai-trend-bot && git log --oneline -1 && git remote -v'
+```
+
+Expected: Task 2의 커밋이 보이고, `origin`이 `github-ai-trend-bot:jaymunsh/ai-trend-bot.git`이다.
+
+- [ ] **Step 5: pull이 되는지 확인한다**
+
+스크립트가 매 실행마다 `git pull --ff-only`를 하므로 여기서 미리 검증한다.
+
+Run: `ssh miniPC 'cd ~/apps/ai-trend-bot && git pull --ff-only && echo "pull 정상"'`
+Expected: `Already up to date.`와 `pull 정상`. 암호를 묻거나 멈추면 `IdentitiesOnly`/키 경로를 다시 본다.
+
+- [ ] **Step 6: 시크릿 파일을 만든다**
 
 **값은 사용자가 직접 넣는다. 이 대화나 로그에 붙이지 않는다.** GitHub Actions Secrets에 있는
 것과 같은 값 세 개다.
@@ -292,7 +335,7 @@ GEMINI_API_KEY=...
 Run: `ssh miniPC 'ls -l ~/.config/ai-trend-bot.env'`
 Expected: `-rw-------` (600)
 
-- [ ] **Step 5: 기존 발송 기록을 상태 경로로 옮긴다**
+- [ ] **Step 7: 기존 발송 기록을 상태 경로로 옮긴다**
 
 **이 단계를 빠뜨리면 첫 실행이 대량 중복 발송을 만든다.** 상태 파일이 비면 최근 항목이 전부
 미발송으로 보인다.
@@ -305,13 +348,13 @@ ssh miniPC 'mkdir -p ~/.local/state/ai-trend-bot ~/logs ~/bin && \
 
 Expected: 167줄 이상 (2026-08-07 기준. 그 사이 발송분만큼 늘어나 있다).
 
-- [ ] **Step 6: 스크립트를 설치한다**
+- [ ] **Step 8: 스크립트를 설치한다**
 
 ```bash
 ssh miniPC 'cp ~/apps/ai-trend-bot/scripts/run-digest.sh ~/bin/run-digest.sh && chmod 755 ~/bin/run-digest.sh'
 ```
 
-- [ ] **Step 7: 발송 없이 파이프라인을 확인한다**
+- [ ] **Step 9: 발송 없이 파이프라인을 확인한다**
 
 `--dry-run`은 `_sent_within` 검사를 건너뛰고 텔레그램으로 보내지 않는다
 (`ai_trend_bot/cli.py:75`). 상태 파일도 쓰지 않는다.
@@ -325,9 +368,9 @@ ssh miniPC 'cd ~/apps/ai-trend-bot && set -a && . ~/.config/ai-trend-bot.env && 
 Expected: 수집·요약이 돌고 브리핑 후보가 출력된다. 텔레그램에는 아무것도 오지 않는다.
 `설정 파일을 찾을 수 없음` 류의 오류가 나면 `cd`가 안 된 것이다.
 
-- [ ] **Step 8: 리소스를 실측한다**
+- [ ] **Step 10: 리소스를 실측한다**
 
-spec 7장의 RAM·디스크가 추정치로 남아 있다. 여기서 실제 값을 잰다. **Step 7과 같은
+spec 7장의 RAM·디스크가 추정치로 남아 있다. 여기서 실제 값을 잰다. **Step 9와 같은
 `--dry-run`을 감싸므로 발송은 일어나지 않는다.** 수집·본문 fetch·Gemini 요약이 메모리의
 대부분이라 실제 발송분과 차이가 없다.
 
@@ -606,7 +649,7 @@ git push origin main
 - Modify: `docs/superpowers/specs/2026-08-07-minipc-execution-design.md` (7장 리소스 표, 10장)
 
 **Interfaces:**
-- Consumes: Task 3 Step 8의 측정값, Task 4 이후 며칠간의 로그
+- Consumes: Task 3 Step 10의 측정값, Task 4 이후 며칠간의 로그
 - Produces: 블로그 글의 재료가 되는 전후 비교 수치
 
 - [ ] **Step 1: 사흘치 실행 로그를 본다**
@@ -629,7 +672,7 @@ Expected: `schedule` 이벤트가 하나도 없다.
 
 - [ ] **Step 4: spec 7장 표를 실측으로 갱신한다**
 
-`실행 시 RAM`과 `디스크` 행의 `(추정)` 표기를 Task 3 Step 8에서 잰 값으로 바꾼다.
+`실행 시 RAM`과 `디스크` 행의 `(추정)` 표기를 Task 3 Step 10에서 잰 값으로 바꾼다.
 근거 열에 `미측정` 대신 측정 방법을 적는다.
 
 - [ ] **Step 5: spec 10장의 첫 항목을 지운다**

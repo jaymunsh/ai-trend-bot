@@ -167,11 +167,21 @@ ai-trend-bot/
 
 ```
 ~/apps/ai-trend-bot/                    git clone. 읽기 전용
+~/.ssh/ai-trend-bot                     read-only deploy key
 ~/.config/ai-trend-bot.env              0600. 시크릿 3개
 ~/bin/run-digest.sh                     0755. 저장소 사본
 ~/.local/state/ai-trend-bot/sent.jsonl  중복 방지 상태
 ~/logs/ai-trend-bot.log                 실행마다 결과 한 줄
 ```
+
+비공개 저장소 clone에는 인증이 필요하다. 계정 전체에 권한이 붙는 PAT 대신 **저장소 하나에만
+붙는 read-only deploy key**를 쓴다. `Allow write access`를 주지 않으므로 miniPC에서 push가
+구조적으로 불가능하고, 만료가 없어 A안의 PAT 만료 리스크가 생기지 않는다. miniPC에는 jay-wiki
+러너도 있으므로 `~/.ssh/config`에 호스트 별칭을 따로 둬 키가 섞이지 않게 한다.
+
+코드 갱신을 rsync로 하는 방법도 검토했다. deploy key가 필요 없어지는 대신 `git pull`이 사라져
+**갱신이 자동에서 수동으로 바뀌고, 박스 위 코드가 어느 시점 것인지 알 수 없게 된다.**
+`config/editorial.md` 튜닝이 반복 작업이라 "머지하면 다음 회차부터 반영"을 택했다.
 
 시크릿을 clone 안의 `.env`가 아니라 `~/.config`에 두는 이유는, `.gitignore`에 걸려 있더라도
 저장소 디렉터리 밖에 두는 편이 실수로 커밋될 여지를 없애기 때문이다. `pydantic-settings`는
