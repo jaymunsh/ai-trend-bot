@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -22,6 +23,12 @@ console = Console()
 DEFAULT_CONFIG_PATH: Final = Path("config/sources.toml")
 SENT_LOG_PATH: Final = Path("data/sent.jsonl")
 EDITORIAL_PATH: Final = Path("config/editorial.md")
+
+
+def sent_log_path() -> Path:
+    """Where the send log lives. Overridable so a read-only clone can keep state elsewhere."""
+    override = os.environ.get("AI_TREND_BOT_SENT_LOG")
+    return Path(override) if override else SENT_LOG_PATH
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,7 +126,7 @@ def _sent_within(hours: float) -> bool:
     """
     if hours <= 0:
         return False
-    last = SentLog(SENT_LOG_PATH).last_sent_at()
+    last = SentLog(sent_log_path()).last_sent_at()
     return last is not None and datetime.now(tz=UTC) - last < timedelta(hours=hours)
 
 
@@ -137,5 +144,5 @@ async def _execute(settings: CliRunSettings) -> RunResult:
                 secrets.telegram_chat_id,
             ),
         )
-        pipeline = BotPipeline(clients, SentLog(SENT_LOG_PATH), EDITORIAL_PATH)
+        pipeline = BotPipeline(clients, SentLog(sent_log_path()), EDITORIAL_PATH)
         return await pipeline.run(config, RunOptions(limit=settings.limit, dry_run=settings.dry_run))
