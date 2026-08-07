@@ -90,10 +90,18 @@ clone해서 그대로 돌리면 매 실행이 이 추적 파일을 수정하고,
 경로를 환경변수로 뺀다. 기본값이 그대로이므로 GitHub Actions 쪽 동작은 바뀌지 않는다.
 
 ```python
-SENT_LOG_PATH: Final = Path(os.environ.get("AI_TREND_BOT_SENT_LOG", "data/sent.jsonl"))
+def sent_log_path() -> Path:
+    """Where the send log lives. Overridable so a read-only clone can keep state elsewhere."""
+    override = os.environ.get("AI_TREND_BOT_SENT_LOG")
+    return Path(override) if override else SENT_LOG_PATH
 ```
 
-이 한 줄로 **저장소가 읽기 전용이 되고 PAT이 아예 필요 없어진다.**
+**상수에 값을 박지 않고 함수로 감싼 이유**는 모듈 상수가 import 시점에 한 번만 평가되기
+때문이다. 그러면 테스트가 `monkeypatch.setenv`로 검증할 수 없고, 한 세션 안에서 먼저 import한
+테스트가 뒤의 테스트를 오염시킨다. 이름을 `_sent_log_path`에서 공개 이름으로 바꾼 것은
+basedpyright가 테스트의 private import를 `reportPrivateUsage`로 잡았기 때문이다.
+
+이것으로 **저장소가 읽기 전용이 되고 PAT이 아예 필요 없어진다.**
 
 ### 3.3 self-hosted 러너를 검토했으나 쓰지 않는다
 
@@ -123,7 +131,7 @@ GitHub은 코드를 받아오는 창구로만 남는다. 발송 경로에 GitHub
 
 | 어디 | 무엇 |
 | --- | --- |
-| `ai_trend_bot/cli.py` | 1줄. 상태 경로를 `AI_TREND_BOT_SENT_LOG`로 재정의 가능하게 |
+| `ai_trend_bot/cli.py` | `sent_log_path()` 추가, 호출부 2곳 교체. 3.2 |
 | `.github/workflows/digest.yml` | `schedule:` 블록(6줄) 삭제. `workflow_dispatch:`는 유지 |
 | `scripts/run-digest.sh` | 신규. 실행 스크립트 정본 |
 | `README.md` | 실행 주체가 miniPC임을 반영 |
@@ -152,7 +160,7 @@ miniPC cron이 어떤 이유로 두 번 발사되는 경우(수동 테스트 등
 ```
 ai-trend-bot/
 ├── .github/workflows/digest.yml               수정
-├── ai_trend_bot/cli.py                        수정 (1줄)
+├── ai_trend_bot/cli.py                        수정
 ├── scripts/
 │   └── run-digest.sh                          신규
 └── docs/
