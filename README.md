@@ -5,6 +5,53 @@ AI 관련 소식을 모아 한국어로 요약하고 텔레그램으로 보내�
 설계 배경과 결정 근거는
 [`docs/superpowers/specs/2026-08-03-digest-quality-overhaul-design.md`](docs/superpowers/specs/2026-08-03-digest-quality-overhaul-design.md)에 있습니다.
 
+## 구조
+
+```mermaid
+flowchart LR
+    subgraph pipe["BotPipeline.run() — pipeline.py"]
+        direction LR
+        collect["① 수집<br/>feeds.py"] --> triage["② 선별<br/>triage.py"]
+        triage --> enrich["③ 심화<br/>enrich.py"]
+        enrich --> deliver["④ 전달<br/>telegram.py"]
+    end
+
+    cron["miniPC cron<br/>07:30 · 13:30 · 19:30 KST"] --> run["run-digest.sh<br/>git pull --ff-only"]
+    run --> collect
+
+    sources[("config/sources.toml<br/>27개 RSS")] -.-> collect
+    editorial[("config/editorial.md<br/>편집 기준")] -.-> triage
+    gemini{{"Gemini<br/>gemini.py"}} -.-> triage
+    gemini -.-> enrich
+    article[("원문 HTML")] -.-> enrich
+
+    deliver --> tg["Telegram"]
+    deliver --> log[("sent.jsonl<br/>store.py")]
+    log -.->|"이미 보낸 key · 최근 event"| collect
+    log -.-> triage
+```
+
+- **상태는 `sent.jsonl` 한 파일뿐입니다.** DB도 캐시도 큐도 없습니다. 이 파일이 수집 단계의
+  중복 제거와 선별 단계의 "후속 보도인가" 판정을 동시에 먹입니다.
+- **Gemini는 두 단계에서 다르게 씁니다.** ②는 수백 건을 훑는 심사, ③ 뒤의 요약은 통과한
+  소수만 대상입니다. 비용이 감당되는 이유가 이 순서입니다.
+- **점선은 읽기, 실선은 흐름입니다.** 점선 입력을 고치는 것이 코드를 고치는 것보다 먼저입니다
+  — 특히 `editorial.md`.
+- 모든 네트워크 호출은 `asyncio.gather`로 병렬입니다. 소스 하나가 죽으면 그 소스만
+  경고로 빠지고 브리핑은 나갑니다.
+
+| 모듈 | 역할 |
+| --- | --- |
+| `pipeline.py` | 4단 조립. 여기만 읽으면 전체 흐름이 보입니다 |
+| `feeds.py` | RSS 수집·정규화 |
+| `triage.py` | LLM 판정 적용 — 분류·사건 병합·순위. **순수 함수라 LLM 없이 테스트됩니다** |
+| `gemini.py` | 유일한 LLM 경계. 선별·요약 프롬프트와 타임아웃 |
+| `enrich.py` | `trafilatura`로 원문 본문 추출, 실패 시 RSS 티저 폴백 |
+| `telegram.py` | HTML 렌더링·4,096자 분할·전송 |
+| `store.py` | `SentLog`. JSONL 읽고 쓰기 |
+| `config.py` | `sources.toml` 파싱·검증 |
+| `cli.py` | Typer 진입점. `check-config`, `run` |
+
 ## 운영 기준
 
 - 발송: 매일 07:30, 13:30, 19:30 (Asia/Seoul). **miniPC의 cron이 실행합니다**
@@ -110,8 +157,10 @@ ssh miniPC 'tail -20 ~/logs/ai-trend-bot.log'
 - 백업은 두지 않습니다. 날아가면 중복 브리핑이 한 번 가고 2주간 triage 맥락이 비지만,
   둘 다 자가 복구됩니다.
 
-탈락 항목과 그 사유는 저장하지 않습니다. 드라이런에서 터미널로 확인하세요
-(`--show-dropped`, 기본 켜짐).
+탈락 항목과 그 사유는 파일로 저장하지 않고 **매 회차 표준 출력에 찍습니다**
+(`--show-dropped`, 기본 켜짐). 드라이런은 두 시간만 지나도 다른 후보 집합을 보므로,
+"이 브리핑이 무엇을 버렸는가"는 그 회차 자신만 답할 수 있습니다. miniPC에서는
+cron이 `~/logs/ai-trend-bot.log`에 이어 붙이므로 며칠이면 분포가 쌓입니다.
 
 ## 설정
 
@@ -133,12 +182,7 @@ uv run ai-trend-bot run --send --limit 30      # 실제 발송
 
 ## 파이프라인
 
-```
-① 수집  collect   27개 소스 → 후보 300건 안팎         feeds.py
-② 선별  triage    1차 배치 심사 → 2차 전역 선별      triage.py, gemini.triage()
-③ 심화  enrich    통과분만 원문 본문 fetch            enrich.py
-④ 전달  deliver   렌더링 → 텔레그램 → 기록 커밋       telegram.py, store.py
-```
+네 단계의 그림은 [위 구조](#구조)에 있습니다. 여기서는 각 단계가 왜 그렇게 생겼는지를 씁니다.
 
 **②가 핵심입니다.** 항목마다 종류를 매기고(`모델·제품 출시`, `연구 결과`, `정책·산업·자금`,
 `도구·오픈소스`, `튜토리얼·사용법`, `홍보·사례소개`, `기타`) 뒤 세 종류는 코드에서 강제로
@@ -245,3 +289,21 @@ uv run ai-trend-bot run --dry-run
 
 구현 구조와 수집처는 [`docs/how-it-works.html`](docs/how-it-works.html)에 한국어 다이어그램
 문서로 정리되어 있습니다.
+
+## 변경 이력
+
+| 날짜 | 무엇이 | 왜 |
+| --- | --- | --- |
+| 2026-08-01 | 첫 동작 — RSS 수집 → Gemini 요약 → 텔레그램. GitHub Actions 예약 | |
+| 2026-08-03 | **선별 계층 도입.** 4단 파이프라인으로 재구성, `config/editorial.md` 신설, 수집처 8 → 27개 | RSS 티저를 요약해 "요약본의 요약"이 나왔고, 중요도 판단 없이 최신순으로만 잘랐다 |
+| 2026-08-04 | 2차 선별을 재심사가 아니라 **"오늘 실을 것 고르기"**로 재정의 | 같은 질문을 두 번 하니 1차 통과분이 거의 전부 재승인돼 상한 30건에 붙었다 |
+| 2026-08-05 | 백업 실행에 `--min-gap-hours` 가드. 프롬프트의 건수 상수를 빼고 볼륨 조절을 `editorial.md`로 이관 | 후보는 "새로 올라온 것"이 아니라 **"아직 안 보낸 것 전부"**라 백업이 매번 2차 브리핑을 보냈다. 프롬프트에 박은 "3~8건"은 편집 기준 위에서 할당량으로 작동했다 |
+| 2026-08-07 | **실행을 miniPC cron으로 이관.** `schedule:` 삭제, `AI_TREND_BOT_SENT_LOG`로 상태 파일 분리 | Actions `schedule`이 +63~193분 지연시키거나 아예 폐기했다. 아침 브리핑이 점심에 오는 게 정상 상태였다 |
+| 2026-08-08 | 탈락 목록을 발송 회차에도 로그에 기록 | 드라이런은 두 시간 뒤면 다른 후보 집합을 본다. "이 브리핑이 무엇을 버렸는가"는 그 회차만 답할 수 있다 |
+
+## 만든 방식
+
+코드는 [ponytail](https://github.com/dietrichgebert/ponytail)을 켠 채로 작성했습니다.
+"안 만들어도 되는 건 안 만든다"를 강제하는 스킬이라, 이 저장소에 DB도 캐시도 큐도 없고
+상태가 JSONL 파일 하나인 것은 그 결과입니다. 의도적으로 자른 구석은 코드와 설계 문서에
+`ponytail:` 주석으로 한계와 업그레이드 경로를 함께 남겨두었습니다.
