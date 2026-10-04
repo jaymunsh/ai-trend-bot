@@ -33,6 +33,21 @@ def sent_log_path() -> Path:
     return Path(override) if override else SENT_LOG_PATH
 
 
+_API_HOST_NAMES: Final = {
+    "generativelanguage.googleapis.com": "Gemini",
+    "api.telegram.org": "Telegram",
+    "graph.threads.net": "Threads",
+}
+
+
+def _api_name(error: httpx2.HTTPError) -> str:
+    """Name the external service that failed, so a one-line log says who it was."""
+    request = error.request
+    if request is None:
+        return "알 수 없는 호스트"
+    return _API_HOST_NAMES.get(request.url.host, request.url.host)
+
+
 @dataclass(frozen=True, slots=True)
 class CliRunSettings:
     config_path: Path
@@ -101,10 +116,12 @@ def run_digest(  # noqa: PLR0913 — each parameter is a user-facing CLI option
     try:
         result = anyio.run(_execute, settings)
     except httpx2.HTTPStatusError as error:
-        console.print(f"[red]외부 API 오류:[/red] HTTP {error.response.status_code}")
+        console.print(
+            f"[red]외부 API 오류:[/red] {_api_name(error)} HTTP {error.response.status_code}"
+        )
         raise typer.Exit(code=1) from error
     except httpx2.RequestError as error:
-        console.print("[red]외부 API 네트워크 오류가 발생했습니다.[/red]")
+        console.print(f"[red]외부 API 네트워크 오류:[/red] {_api_name(error)}")
         raise typer.Exit(code=1) from error
     except (ValueError, SummaryMismatchError) as error:
         console.print(f"[red]응답 처리 오류:[/red] {error}")
