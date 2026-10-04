@@ -43,8 +43,6 @@ _API_HOST_NAMES: Final = {
 def _api_name(error: httpx2.HTTPError) -> str:
     """Name the external service that failed, so a one-line log says who it was."""
     request = error.request
-    if request is None:
-        return "알 수 없는 호스트"
     return _API_HOST_NAMES.get(request.url.host, request.url.host)
 
 

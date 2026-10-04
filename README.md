@@ -1,11 +1,21 @@
-# AI Trend Bot
-
 <p align="center">
-  <img src="docs/assets/ai-news-robot.png" width="220" height="220" alt="AI NEWS 신문을 들고 손을 흔드는 AI Trend Bot 로봇" />
+  <a href="https://jaymunsh.github.io/ai-trend-bot/">
+    <img src="docs/assets/ai-news-robot.png" width="220" height="220" alt="AI NEWS 신문을 들고 손을 흔드는 AI Trend Bot 로봇" />
+  </a>
 </p>
 
+# AI Trend Bot
+
 AI 관련 소식을 선별해 짧은 한국어 요약과 원문 링크로 하루 세 번 보내는 개인용 Telegram 봇입니다.
-[서비스 소개 페이지](docs/how-it-works.html)에서 수집 출처와 구조를 볼 수 있습니다.
+[서비스 소개 페이지](https://jaymunsh.github.io/ai-trend-bot/)에서 수집 출처와 작동 원리를 볼 수 있습니다.
+
+| 회차 | 수집·요약 시작 | Telegram 발송 |
+| --- | --- | --- |
+| 🌤️ 아침 | 07:15 | 07:30 |
+| ☀️ 점심 | 13:15 | 13:30 |
+| 🌙 저녁 | 19:15 | 19:30 |
+
+한국 표준시 기준입니다. 중요한 소식만 최대 50건까지 보내며, 통과한 소식이 없으면 발송하지 않습니다.
 
 ## 구조
 
@@ -103,6 +113,8 @@ uv run ai-trend-bot archive-log               # 과거 기록만 월별로 이�
 install -m 755 ~/apps/ai-trend-bot/scripts/run-digest.sh ~/bin/run-digest.sh
 # crontab -e: 기존 줄 교체, 중복 추가하지 않음
 15 7,13,19 * * * ~/bin/run-digest.sh >> ~/logs/ai-trend-bot.log 2>&1
+# 실패 회차를 발송 시각 40분 뒤 재시도. 성공한 회차는 3시간 간격 보호로 건너뜀.
+10 8,14,20 * * * ~/bin/run-digest.sh --immediate >> ~/logs/ai-trend-bot.log 2>&1
 ```
 
 스크립트는 Linux의 `flock`으로 겹친 실행을 막습니다. `--min-gap-hours 3`은 준비 전과
@@ -112,6 +124,10 @@ install -m 755 ~/apps/ai-trend-bot/scripts/run-digest.sh ~/bin/run-digest.sh
 GitHub Actions는 **수동 대체 실행**만 제공합니다. 정기 실행은 하지 않습니다.
 Actions는 miniPC의 최신 발송 기록을 볼 수 없어 중복 브리핑을 보낼 수 있습니다.
 수동 Actions 실행은 즉시 발송하며, 성공 기록과 월별 archive를 저장소에 커밋합니다.
+
+서비스 소개는 GitHub Pages로 배포합니다. `main`의 소개 HTML·assets·Pages workflow가 바뀌면
+`.github/workflows/pages.yml`이 공개 페이지를 갱신합니다. 배포 대상은 소개 HTML과 assets뿐이며,
+봇 실행이나 Telegram 발송과는 독립적으로 동작합니다.
 
 ## 데이터 저장
 
