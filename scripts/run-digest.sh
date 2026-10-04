@@ -51,5 +51,5 @@ git pull --ff-only --quiet || echo "$(date -Is) git pull 실패, 기존 코드�
 STAGE="의존성 동기화 (uv sync)"
 "$UV" sync --frozen --quiet
 STAGE="수집·요약·발송 (ai-trend-bot run)"
-"$UV" run ai-trend-bot run --send "$RUN_MODE" --limit 50 --min-gap-hours 3
+"$UV" run ai-trend-bot run --send "$RUN_MODE" --limit 30 --min-gap-hours 3
 echo "$(date -Is) done"

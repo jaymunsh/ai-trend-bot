@@ -33,7 +33,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         # Manual fallback sends immediately; it does not wait for a regular slot.
-        run: uv run ai-trend-bot run --send --limit 50 --min-gap-hours 3
+        run: uv run ai-trend-bot run --send --limit 30 --min-gap-hours 3
       - name: Commit send log
         if: always()
         run: |

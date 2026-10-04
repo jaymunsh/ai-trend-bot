@@ -5,10 +5,26 @@ from typing import cast
 from unittest.mock import AsyncMock
 
 import httpx2
+import pytest
 from pydantic import HttpUrl
 
 from ai_trend_bot.gemini import GeminiClient, parse_summary
 from ai_trend_bot.models import RawItem, SourceKind
+
+
+@pytest.mark.parametrize("content", [{"parts": [{"text": '{"items":['}]}, None])
+def test_generation_detects_output_limit_before_parsing_partial_json(content):
+    async def run():
+        candidate = {"finishReason": "MAX_TOKENS"}
+        if content is not None:
+            candidate["content"] = content
+        transport = httpx2.MockTransport(lambda request: httpx2.Response(200, json={"candidates": [candidate]}))
+        async with httpx2.AsyncClient(transport=transport) as client:
+            gemini = GeminiClient(client, "test", "test")
+            return await gemini._generate("test", {})
+
+    with pytest.raises(ValueError, match="출력 길이 한도"):
+        asyncio.run(run())
 
 
 def test_parse_summary_when_response_matches_items() -> None:

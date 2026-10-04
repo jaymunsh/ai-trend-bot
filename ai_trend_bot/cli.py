@@ -91,7 +91,7 @@ def check_config(
 def run_digest(  # noqa: PLR0913 — each parameter is a user-facing CLI option
     *,
     config: Annotated[Path, typer.Option("--config", exists=True, dir_okay=False)] = DEFAULT_CONFIG_PATH,
-    limit: Annotated[int, typer.Option("--limit", min=1, max=50)] = 50,
+    limit: Annotated[int, typer.Option("--limit", min=1, max=30)] = 30,
     dry_run: Annotated[bool, typer.Option("--dry-run/--send")] = True,
     show_dropped: Annotated[bool, typer.Option("--show-dropped/--no-show-dropped")] = True,
     min_gap_hours: Annotated[float, typer.Option("--min-gap-hours", min=0)] = 0,

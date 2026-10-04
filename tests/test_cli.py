@@ -83,12 +83,13 @@ def test_report_shows_dropped_when_sending() -> None:
     assert "How SomeCorp digitizes policies" in output
 
 
-def test_cli_accepts_fifty_items_and_rejects_larger_limits(monkeypatch):
+def test_cli_defaults_to_thirty_and_rejects_larger_limits(monkeypatch):
 
     execute = AsyncMock(return_value=RunResult(items=(), warnings=()))
     monkeypatch.setattr(cli, "_execute", execute)
     runner = CliRunner()
-    assert runner.invoke(app, ["run", "--dry-run", "--limit", "50"]).exit_code == 0
+    assert runner.invoke(app, ["run", "--dry-run"]).exit_code == 0
     settings = cast("CliRunSettings", execute.call_args.args[0])
-    assert settings.limit == 50
-    assert runner.invoke(app, ["run", "--dry-run", "--limit", "51"]).exit_code == 2
+    assert settings.limit == 30
+    assert runner.invoke(app, ["run", "--dry-run", "--limit", "30"]).exit_code == 0
+    assert runner.invoke(app, ["run", "--dry-run", "--limit", "31"]).exit_code == 2

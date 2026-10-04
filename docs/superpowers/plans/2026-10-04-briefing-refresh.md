@@ -8,7 +8,7 @@
 **Spec:** docs/superpowers/specs/2026-10-04-briefing-refresh-design.md
 
 ## Global Constraints
-- 발송 07:30·13:30·19:30 KST; 준비15분 전; 상한50.
+- 발송 07:30·13:30·19:30 KST; 준비15분 전; 상한30 (2026-10-05 후속 승인).
 - 삭제 없음, 추가 서버/후보 저장 없음, 기존 Threads 실패 격리 유지.
 - 기존 디자인과 사용자 이미지 변경 유지. 새 의존성 추가 없음.
 
@@ -50,3 +50,13 @@ Files: README.md, PRODUCT.md, docs/how-it-works.html, docs/assets/overview.js, D
 - [x] pytest, Ruff, basedpyright, shell syntax, config검증 및 문서링크/브라우저확인.
 - [x] fresh-context whole-change review 후 중요한 지적 수정.
 - [x] 코드/로컬검증과 실제운영반영 상태를 분리해 최종보고.
+
+### 2026-10-05 무료 쿼터 후속 변경
+
+위 Task3의 50건/무조건10건배치 구현은 후속 요구로 대체한다.
+- [x] 정상 응답에서30건 요약1회, 기본·최대CLI30건으로 복귀.
+- [x] 명시적MAX_TOKENS만10건 분할로 처리. 10건 이하·쿼터429·개수 오류는 추가 분할하지 않음.
+- [x] 분할 도중 실패 시 일부 요약을 발송하거나 기록하지 않음. 입력순서 유지.
+- [x] 정규·수동runner, README, 공개 소개에30건/기본1회 요청 반영.
+- [x] 코드 리뷰 완료, 56개 테스트 통과.
+- 운영: Git·miniPC·Pages를 함께 갱신하고, 검증 과정에서 실제 Gemini/Telegram 호출은 하지 않는다.

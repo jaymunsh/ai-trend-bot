@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from ai_trend_bot.config import AppConfig
 from ai_trend_bot.enrich import fetch_body
 from ai_trend_bot.feeds import FeedClient
-from ai_trend_bot.gemini import GeminiClient
+from ai_trend_bot.gemini import GeminiClient, GenerationLimitError
 from ai_trend_bot.models import DigestItem, RawItem
 from ai_trend_bot.scheduling import wait_until
 from ai_trend_bot.store import SentLog
@@ -21,7 +21,7 @@ from ai_trend_bot.triage import Dropped, Selected, Selection, apply_triage
 
 # Free-tier Gemini answers 503 to a few hundred candidates in one request; 100 is served reliably.
 TRIAGE_BATCH: Final = 100
-SUMMARY_BATCH: Final = 10
+SUMMARY_FALLBACK_BATCH: Final = 10
 # The first round judges each item on its own merits, which is the right question when
 # screening hundreds. Asked the same way twice, the second round just re-approves nearly
 # everything, so it is framed as picking a lineup instead.
@@ -92,11 +92,7 @@ class BotPipeline:
         enriched = await asyncio.gather(
             *(fetch_body(self._clients.http, selected.item) for selected in selection.kept),
         )
-        # Small, sequential batches bound output size and avoid a five-request
-        # burst against the API quota. No partial digest is sent if one fails.
-        summaries: list[DigestItem] = []
-        for start in range(0, len(enriched), SUMMARY_BATCH):
-            summaries.extend(await self._clients.gemini.summarize(enriched[start : start + SUMMARY_BATCH]))
+        summaries = await self._summarize(enriched)
         digest = tuple(
             summary.model_copy(
                 update={
@@ -137,6 +133,19 @@ class BotPipeline:
             dropped=selection.dropped,
             candidates=len(candidates),
         )
+
+    async def _summarize(self, items: Sequence[RawItem]) -> tuple[DigestItem, ...]:
+        # One request conserves the free request quota. Split only when the API
+        # explicitly reports an output token limit, never on quota/network errors.
+        try:
+            return await self._clients.gemini.summarize(items)
+        except GenerationLimitError:
+            if len(items) <= SUMMARY_FALLBACK_BATCH:
+                raise
+            retried: list[DigestItem] = []
+            for start in range(0, len(items), SUMMARY_FALLBACK_BATCH):
+                retried.extend(await self._clients.gemini.summarize(items[start : start + SUMMARY_FALLBACK_BATCH]))
+            return tuple(retried)
 
     async def _triage(self, candidates: tuple[RawItem, ...], *, limit: int) -> Selection:
         """Screen in batches, then re-screen the survivors together.

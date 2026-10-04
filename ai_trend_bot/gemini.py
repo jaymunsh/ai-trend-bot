@@ -46,13 +46,18 @@ class GeminiContent(BaseModel):
 class GeminiCandidate(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
-    content: GeminiContent
+    content: GeminiContent | None = None
+    finish_reason: str = Field(default="", alias="finishReason")
 
 
 class GeminiResponse(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True)
 
     candidates: tuple[GeminiCandidate, ...]
+
+
+class GenerationLimitError(ValueError):
+    """The API explicitly stopped generation at its output token limit."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,9 +125,15 @@ class GeminiClient:
             response = await self._post(prompt, schema)
         response.raise_for_status()
         parsed = GeminiResponse.model_validate(response.json())
-        if not parsed.candidates or not parsed.candidates[0].content.parts:
+        if not parsed.candidates:
             return ""
-        return parsed.candidates[0].content.parts[0].text
+        candidate = parsed.candidates[0]
+        if candidate.finish_reason == "MAX_TOKENS":
+            msg = "Gemini 응답이 출력 길이 한도로 중단되었습니다."
+            raise GenerationLimitError(msg)
+        if candidate.content is None or not candidate.content.parts:
+            return ""
+        return candidate.content.parts[0].text
 
     async def triage(
         self,

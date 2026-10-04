@@ -4,11 +4,13 @@ from datetime import UTC, datetime, time, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import httpx2
 import pytest
 from pydantic import HttpUrl
 
 import ai_trend_bot.pipeline as module
 from ai_trend_bot.config import AppConfig, DeliveryConfig, FeedCategory, FeedSource, ThreadsConfig
+from ai_trend_bot.gemini import GenerationLimitError, SummaryMismatchError
 from ai_trend_bot.models import DigestItem, RawItem, SourceKind
 from ai_trend_bot.pipeline import BotPipeline, PipelineClients, RunOptions
 from ai_trend_bot.store import SentLog
@@ -129,12 +131,11 @@ def test_single_triage_round_reports_cap_and_empty_final_never_calls_model(tmp_p
     assert triage.await_count == 2
 
 
-def test_fifty_summaries_are_batched_and_keep_order(tmp_path, monkeypatch):
+def test_thirty_summaries_use_one_request_and_keep_order(tmp_path, monkeypatch):
     monkeypatch.setattr(module, "fetch_body", AsyncMock(side_effect=lambda client, item: item))
-    items = tuple(raw(i) for i in range(50))
+    items = tuple(raw(i) for i in range(30))
 
     async def summarize(batch):
-        assert len(batch) <= 10
         return tuple(
             DigestItem(title=item.title, summary="one factual sentence", source_url=item.url, source_label=item.source)
             for item in batch
@@ -144,14 +145,107 @@ def test_fifty_summaries_are_batched_and_keep_order(tmp_path, monkeypatch):
     bot = pipeline(
         tmp_path,
         gemini=SimpleNamespace(
-            triage=AsyncMock(return_value=tuple(verdict(i) for i in range(50))), summarize=summaries
+            triage=AsyncMock(return_value=tuple(verdict(i) for i in range(30))), summarize=summaries
         ),
         http=None,
     )
     bot._collect = AsyncMock(return_value=(items, []))
-    result = asyncio.run(bot.run(config(), RunOptions(limit=50, dry_run=True)))
+    result = asyncio.run(bot.run(config(), RunOptions(limit=30, dry_run=True)))
     assert tuple(item.source_url for item in result.items) == tuple(item.url for item in items)
-    assert summaries.await_count == 5
+    assert summaries.await_count == 1
+
+
+def test_summary_splits_only_after_confirmed_output_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr(module, "fetch_body", AsyncMock(side_effect=lambda client, item: item))
+    items = tuple(raw(i) for i in range(25))
+    batch_sizes: list[int] = []
+
+    async def summarize(batch):
+        batch_sizes.append(len(batch))
+        if len(batch) > 10:
+            message = "output limit"
+            raise GenerationLimitError(message)
+        return tuple(
+            DigestItem(title=item.title, summary="facts", source_url=item.url, source_label=item.source)
+            for item in batch
+        )
+
+    summaries = AsyncMock(side_effect=summarize)
+    bot = pipeline(
+        tmp_path,
+        gemini=SimpleNamespace(
+            triage=AsyncMock(return_value=tuple(verdict(i) for i in range(25))), summarize=summaries
+        ),
+    )
+    bot._collect = AsyncMock(return_value=(items, []))
+    result = asyncio.run(bot.run(config(), RunOptions(limit=30, dry_run=True)))
+    assert batch_sizes == [25, 10, 10, 5]
+    assert tuple(item.source_url for item in result.items) == tuple(item.url for item in items)
+
+
+@pytest.mark.parametrize("count", [1, 10])
+def test_small_output_limited_summary_is_not_repeated(tmp_path, monkeypatch, count):
+    monkeypatch.setattr(module, "fetch_body", AsyncMock(side_effect=lambda client, item: item))
+    summaries = AsyncMock(side_effect=GenerationLimitError("output limit"))
+    bot = pipeline(
+        tmp_path,
+        gemini=SimpleNamespace(
+            triage=AsyncMock(return_value=tuple(verdict(i) for i in range(count))), summarize=summaries
+        ),
+    )
+    bot._collect = AsyncMock(return_value=(tuple(raw(i) for i in range(count)), []))
+    with pytest.raises(GenerationLimitError):
+        asyncio.run(bot.run(config(), RunOptions(limit=30, dry_run=True)))
+    assert summaries.await_count == 1
+
+
+def test_failed_fallback_does_not_send_or_record_partial_summary(tmp_path, monkeypatch):
+    monkeypatch.setattr(module, "fetch_body", AsyncMock(side_effect=lambda client, item: item))
+    items = tuple(raw(i) for i in range(15))
+    first_batch = tuple(
+        DigestItem(title=item.title, summary="facts", source_url=item.url, source_label=item.source)
+        for item in items[:10]
+    )
+    summaries = AsyncMock(side_effect=[GenerationLimitError("output limit"), first_batch, ValueError("bad response")])
+    send = Mock()
+    bot = pipeline(
+        tmp_path,
+        gemini=SimpleNamespace(
+            triage=AsyncMock(return_value=tuple(verdict(i) for i in range(15))), summarize=summaries
+        ),
+        telegram=SimpleNamespace(send=send),
+    )
+    bot._collect = AsyncMock(return_value=(items, []))
+    with pytest.raises(ValueError, match="bad response"):
+        asyncio.run(bot.run(config(), RunOptions(limit=30, dry_run=False)))
+    send.assert_not_called()
+    assert not (tmp_path / "sent.jsonl").exists()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        SummaryMismatchError(expected_count=15, actual_count=14),
+        httpx2.HTTPStatusError(
+            "quota exhausted",
+            request=httpx2.Request("POST", "https://example.com/generate"),
+            response=httpx2.Response(429),
+        ),
+    ],
+)
+def test_quota_or_incomplete_summary_does_not_trigger_split_requests(tmp_path, monkeypatch, error):
+    monkeypatch.setattr(module, "fetch_body", AsyncMock(side_effect=lambda client, item: item))
+    summaries = AsyncMock(side_effect=error)
+    bot = pipeline(
+        tmp_path,
+        gemini=SimpleNamespace(
+            triage=AsyncMock(return_value=tuple(verdict(i) for i in range(15))), summarize=summaries
+        ),
+    )
+    bot._collect = AsyncMock(return_value=(tuple(raw(i) for i in range(15)), []))
+    with pytest.raises(type(error)):
+        asyncio.run(bot.run(config(), RunOptions(limit=30, dry_run=True)))
+    assert summaries.await_count == 1
 
 
 def test_scheduled_run_waits_after_summaries_and_records_only_delivered_chunks(tmp_path, monkeypatch):

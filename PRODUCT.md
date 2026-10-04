@@ -31,7 +31,7 @@ without reading every source article.
 
 The documented regular runner is miniPC cron at 07:15, 13:15 and 19:15 Asia/Seoul, preparing deliveries for 07:30, 13:30 and 19:30.
 GitHub supplies code updates; Actions is a manual fallback. Delivery is variable,
-with no message when nothing qualifies, and an operational cap of 50 items.
+with no message when nothing qualifies, and an operational cap of 30 items.
 
 ## Capabilities and Constraints
 
