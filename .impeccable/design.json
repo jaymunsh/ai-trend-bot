@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T10:04:02.844816+00:00",
+  "title": "Design System: AI Trend Bot",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#f4f2eb",
+        "tonalRamp": [
+          "oklch(15% 0.0095 93.57)",
+          "oklch(26% 0.0095 93.57)",
+          "oklch(38% 0.0095 93.57)",
+          "oklch(49% 0.0095 93.57)",
+          "oklch(61% 0.0095 93.57)",
+          "oklch(72% 0.0095 93.57)",
+          "oklch(84% 0.0095 93.57)",
+          "oklch(95% 0.0095 93.57)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Light Paper",
+        "canonical": "#fffef9",
+        "tonalRamp": [
+          "oklch(15% 0.0067 97.35)",
+          "oklch(26% 0.0067 97.35)",
+          "oklch(38% 0.0067 97.35)",
+          "oklch(49% 0.0067 97.35)",
+          "oklch(61% 0.0067 97.35)",
+          "oklch(72% 0.0067 97.35)",
+          "oklch(84% 0.0067 97.35)",
+          "oklch(95% 0.0067 97.35)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Olive Ink",
+        "canonical": "#20291f",
+        "tonalRamp": [
+          "oklch(15% 0.0222 142.29)",
+          "oklch(26% 0.0222 142.29)",
+          "oklch(38% 0.0222 142.29)",
+          "oklch(49% 0.0222 142.29)",
+          "oklch(61% 0.0222 142.29)",
+          "oklch(72% 0.0222 142.29)",
+          "oklch(84% 0.0222 142.29)",
+          "oklch(95% 0.0222 142.29)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Olive",
+        "canonical": "#62685d",
+        "tonalRamp": [
+          "oklch(15% 0.0185 130.61)",
+          "oklch(26% 0.0185 130.61)",
+          "oklch(38% 0.0185 130.61)",
+          "oklch(49% 0.0185 130.61)",
+          "oklch(61% 0.0185 130.61)",
+          "oklch(72% 0.0185 130.61)",
+          "oklch(84% 0.0185 130.61)",
+          "oklch(95% 0.0185 130.61)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Paper Rule",
+        "canonical": "#d2d3c8",
+        "tonalRamp": [
+          "oklch(15% 0.0150 110.92)",
+          "oklch(26% 0.0150 110.92)",
+          "oklch(38% 0.0150 110.92)",
+          "oklch(49% 0.0150 110.92)",
+          "oklch(61% 0.0150 110.92)",
+          "oklch(72% 0.0150 110.92)",
+          "oklch(84% 0.0150 110.92)",
+          "oklch(95% 0.0150 110.92)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Burnt Orange",
+        "canonical": "#ae4d20",
+        "tonalRamp": [
+          "oklch(15% 0.1392 42.83)",
+          "oklch(26% 0.1392 42.83)",
+          "oklch(38% 0.1392 42.83)",
+          "oklch(49% 0.1392 42.83)",
+          "oklch(61% 0.1392 42.83)",
+          "oklch(72% 0.1392 42.83)",
+          "oklch(84% 0.1392 42.83)",
+          "oklch(95% 0.1392 42.83)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Orange Wash",
+        "canonical": "#efe0d3",
+        "tonalRamp": [
+          "oklch(15% 0.0240 63.48)",
+          "oklch(26% 0.0240 63.48)",
+          "oklch(38% 0.0240 63.48)",
+          "oklch(49% 0.0240 63.48)",
+          "oklch(61% 0.0240 63.48)",
+          "oklch(72% 0.0240 63.48)",
+          "oklch(84% 0.0240 63.48)",
+          "oklch(95% 0.0240 63.48)"
+        ]
+      },
+      "dark": {
+        "role": "neutral",
+        "displayName": "Deep Olive",
+        "canonical": "#202d27",
+        "tonalRamp": [
+          "oklch(15% 0.0209 164.98)",
+          "oklch(26% 0.0209 164.98)",
+          "oklch(38% 0.0209 164.98)",
+          "oklch(49% 0.0209 164.98)",
+          "oklch(61% 0.0209 164.98)",
+          "oklch(72% 0.0209 164.98)",
+          "oklch(84% 0.0209 164.98)",
+          "oklch(95% 0.0209 164.98)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Dark Surface Ink",
+        "canonical": "#f4f2eb",
+        "tonalRamp": [
+          "oklch(15% 0.0095 93.57)",
+          "oklch(26% 0.0095 93.57)",
+          "oklch(38% 0.0095 93.57)",
+          "oklch(49% 0.0095 93.57)",
+          "oklch(61% 0.0095 93.57)",
+          "oklch(72% 0.0095 93.57)",
+          "oklch(84% 0.0095 93.57)",
+          "oklch(95% 0.0095 93.57)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Surface Muted Ink",
+        "canonical": "#c0cbbb",
+        "tonalRamp": [
+          "oklch(15% 0.0250 135.70)",
+          "oklch(26% 0.0250 135.70)",
+          "oklch(38% 0.0250 135.70)",
+          "oklch(49% 0.0250 135.70)",
+          "oklch(61% 0.0250 135.70)",
+          "oklch(72% 0.0250 135.70)",
+          "oklch(84% 0.0250 135.70)",
+          "oklch(95% 0.0250 135.70)"
+        ]
+      },
+      "dark-rule": {
+        "role": "neutral",
+        "displayName": "Dark Surface Rule",
+        "canonical": "#4c5c50",
+        "tonalRamp": [
+          "oklch(15% 0.0276 152.80)",
+          "oklch(26% 0.0276 152.80)",
+          "oklch(38% 0.0276 152.80)",
+          "oklch(49% 0.0276 152.80)",
+          "oklch(61% 0.0276 152.80)",
+          "oklch(72% 0.0276 152.80)",
+          "oklch(84% 0.0276 152.80)",
+          "oklch(95% 0.0276 152.80)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Desktop hero headline; mobile sizes are responsive overrides."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Default section headings."
+      },
+      "title": {
+        "displayName": "Stage Title",
+        "purpose": "Heading inside the selected processing detail panel."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default paragraph size and reading line height."
+      },
+      "label": {
+        "displayName": "Navigation Label",
+        "purpose": "Desktop section navigation."
+      },
+      "mono": {
+        "displayName": "Code",
+        "purpose": "Inline implementation references."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "160ms ease-out",
+        "purpose": "Processing step background and disclosure indicator; disabled for reduced motion."
+      },
+      {
+        "name": "hero-arrival",
+        "value": "650ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Desktop hero copy at min-width 1000px, moving upward from 8px with clip-path; disabled for reduced motion."
+      },
+      {
+        "name": "anchor-scroll",
+        "value": "smooth",
+        "purpose": "In-page anchor scrolling; auto for reduced motion and print."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1060px"
+      },
+      {
+        "name": "single-column",
+        "value": "760px"
+      },
+      {
+        "name": "narrow-phone",
+        "value": "360px"
+      },
+      {
+        "name": "hero-animation-min",
+        "value": "1000px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Anchor action leading to the processing explanation.",
+      "html": "<a class=\"ds-primary\" href=\"#architecture\">작동 원리 살펴보기<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></a>",
+      "css": ".ds-primary{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:16px;min-height:50px;padding:14px 20px;text-decoration:none;font-size:15px;font-weight:600;border:1px solid var(--ink,#20291f);border-radius:6px;background:var(--ink,#20291f);color:var(--paper,#fffef9);}.ds-primary:hover{background:var(--dark-rule,#4c5c50);}.ds-primary:focus-visible{outline:2px solid var(--accent,#ae4d20);outline-offset:5px;}.ds-primary svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}"
+    },
+    {
+      "name": "Text action",
+      "kind": "button",
+      "refersTo": "text-link",
+      "description": "Quiet secondary anchor with an inline direction icon.",
+      "html": "<a class=\"ds-text-link\" href=\"https://github.com/jaymunsh/ai-trend-bot\">코드 보기<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></a>",
+      "css": ".ds-text-link{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;min-height:44px;text-decoration:none;color:var(--ink,#20291f);text-underline-offset:5px;}.ds-text-link:hover{text-decoration:underline;color:var(--accent,#ae4d20);}.ds-text-link:focus-visible{outline:2px solid var(--accent,#ae4d20);outline-offset:5px;}.ds-text-link svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}"
+    },
+    {
+      "name": "Section navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Sticky header anchors; current section receives an accent underline.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"페이지 탐색\"><a href=\"#architecture\" aria-current=\"true\">작동 원리</a><a href=\"#sources\">출처</a><a href=\"#operation\">운영</a></nav>",
+      "css": ".ds-nav{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);display:flex;gap:26px;}.ds-nav a{font-size:14px;font-weight:550;color:var(--muted,#62685d);text-decoration:none;display:flex;align-items:center;min-height:44px;position:relative;}.ds-nav a:hover,.ds-nav a[aria-current=\"true\"]{color:var(--accent,#ae4d20);}.ds-nav a[aria-current=\"true\"]::after{content:\"\";position:absolute;height:2px;background:var(--accent,#ae4d20);bottom:0;left:0;right:0;}.ds-nav a:focus-visible{outline:2px solid var(--accent,#ae4d20);outline-offset:5px;}"
+    },
+    {
+      "name": "Source filter",
+      "kind": "chip",
+      "refersTo": "filter",
+      "description": "Pressed and unpressed controls for the configured source groups.",
+      "html": "<div class=\"ds-filters\" role=\"group\" aria-label=\"출처 분류\"><button type=\"button\" aria-pressed=\"true\">전체 <span>30</span></button><button type=\"button\" aria-pressed=\"false\">공식 <span>9</span></button></div>",
+      "css": ".ds-filters{display:flex;gap:8px;flex-wrap:wrap;}.ds-filters button{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);min-height:44px;padding:10px 14px;border:1px solid var(--rule,#d2d3c8);background:transparent;color:var(--muted,#62685d);border-radius:5px;font-size:13px;display:inline-flex;gap:10px;align-items:center;cursor:pointer;}.ds-filters span{font-variant-numeric:tabular-nums;}.ds-filters button:hover{border-color:var(--accent,#ae4d20);color:var(--accent,#ae4d20);}.ds-filters button[aria-pressed=\"true\"]{background:var(--ink,#20291f);color:var(--paper,#fffef9);border-color:var(--ink,#20291f);}.ds-filters button:focus-visible{outline:2px solid var(--accent,#ae4d20);outline-offset:5px;}"
+    },
+    {
+      "name": "Processing step",
+      "kind": "custom",
+      "refersTo": "pipeline-step",
+      "description": "Numbered selection control; dark pressed state points toward a detail panel.",
+      "html": "<button type=\"button\" class=\"ds-step\" aria-pressed=\"true\"><span class=\"ds-number\">01</span><strong>수집</strong><span>RSS · 공개 API</span></button>",
+      "css": ".ds-step{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);position:relative;border:0;border-top:1px solid var(--rule,#d2d3c8);background:transparent;text-align:left;color:var(--ink,#20291f);padding:22px 20px 24px;min-width:0;transition:background-color 160ms ease-out;cursor:pointer;}.ds-step:hover{background:var(--accent-soft,#efe0d3);}.ds-step[aria-pressed=\"true\"]{background:var(--dark,#202d27);color:var(--paper,#fffef9);border-color:var(--dark,#202d27);}.ds-step .ds-number{display:block;font-size:13px;font-variant-numeric:tabular-nums;margin-bottom:22px;color:var(--muted,#62685d);}.ds-step strong{display:block;font-size:20px;margin-bottom:6px;}.ds-step>span:last-child{display:block;font-size:12px;line-height:1.6;color:var(--muted,#62685d);word-break:keep-all;}.ds-step[aria-pressed=\"true\"] span{color:var(--dark-muted,#c0cbbb);}.ds-step[aria-pressed=\"true\"]::after{content:\"\";position:absolute;bottom:-8px;left:24px;width:14px;height:14px;background:var(--dark,#202d27);transform:rotate(45deg);}.ds-step:focus-visible{outline:2px solid var(--accent,#ae4d20);outline-offset:5px;}@media(prefers-reduced-motion:reduce){.ds-step{transition:none;}}"
+    },
+    {
+      "name": "Stage detail panel",
+      "kind": "card",
+      "refersTo": "stage-panel",
+      "description": "Square paper panel carrying the selected step explanation.",
+      "html": "<section class=\"ds-panel\"><span>수집</span><h3>여러 출처를 하나의 후보 목록으로.</h3><p>28개 RSS·Atom 피드와 Hacker News, Hugging Face API를 병렬로 조회합니다.</p></section>",
+      "css": ".ds-panel{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);background:var(--paper,#fffef9);color:var(--ink,#20291f);padding:36px 32px;border:1px solid var(--rule,#d2d3c8);}.ds-panel>span{font-size:13px;color:var(--accent,#ae4d20);display:block;margin-bottom:12px;font-weight:650;}.ds-panel h3{margin:0;font-size:25px;font-weight:700;line-height:1.4;letter-spacing:-.02em;word-break:keep-all;}.ds-panel p{font-size:15px;margin:14px 0 0;color:var(--muted,#62685d);max-width:62ch;line-height:1.75;word-break:keep-all;overflow-wrap:anywhere;}"
+    },
+    {
+      "name": "FAQ disclosure",
+      "kind": "custom",
+      "refersTo": "disclosure",
+      "description": "Native expandable answer with a rotating plus indicator.",
+      "html": "<details class=\"ds-faq\"><summary>기사가 몇 개씩 오나요? <span aria-hidden=\"true\">+</span></summary><p>발송량은 가변입니다. 기준을 통과한 소식이 없으면 보내지 않습니다.</p></details>",
+      "css": ".ds-faq{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);border-top:1px solid var(--ink,#20291f);border-bottom:1px solid var(--rule,#d2d3c8);color:var(--ink,#20291f);}.ds-faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:16px;font-weight:600;min-height:70px;padding-block:18px;word-break:keep-all;}.ds-faq summary::-webkit-details-marker{display:none;}.ds-faq summary:hover{color:var(--accent,#ae4d20);}.ds-faq summary:focus-visible{outline:2px solid var(--accent,#ae4d20);outline-offset:5px;}.ds-faq summary>span{font-size:22px;font-weight:400;color:var(--muted,#62685d);flex-shrink:0;margin-left:16px;transition:transform 160ms ease-out;}.ds-faq[open]>summary>span{transform:rotate(45deg);}.ds-faq p{font-size:14px;color:var(--muted,#62685d);margin:0;padding-bottom:24px;line-height:1.85;word-break:keep-all;}@media(prefers-reduced-motion:reduce){.ds-faq summary>span{transition:none;}}"
+    },
+    {
+      "name": "Operating schedule",
+      "kind": "custom",
+      "refersTo": "schedule",
+      "description": "Dark ordered list of the three configured run times, not a live status widget.",
+      "html": "<div class=\"ds-operation\"><ol class=\"ds-schedule\" aria-label=\"정규 발송 시각, 한국 표준시\"><li><span>아침</span><time>07:30</time></li><li><span>점심</span><time>13:30</time></li><li><span>저녁</span><time>19:30</time></li></ol></div>",
+      "css": ".ds-operation{font-family:var(--font-sans,Pretendard,\"Apple SD Gothic Neo\",sans-serif);background:var(--dark,#202d27);color:var(--dark-ink,#f4f2eb);}.ds-schedule{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);margin:0;padding:0;border-top:1px solid var(--dark-rule,#4c5c50);border-bottom:1px solid var(--dark-rule,#4c5c50);}.ds-schedule li{padding:26px 0 30px;}.ds-schedule li+li{border-left:1px solid var(--dark-rule,#4c5c50);padding-left:36px;}.ds-schedule span{display:block;font-size:13px;color:var(--dark-muted,#c0cbbb);margin-bottom:10px;}.ds-schedule time{font-size:clamp(40px,5vw,68px);font-weight:550;line-height:1.15;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}@media(max-width:760px){.ds-schedule li{padding-block:22px;}.ds-schedule li+li{padding-left:18px;}.ds-schedule time{font-size:clamp(29px,7vw,48px);}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Korean Editorial Brief",
+    "overview": "Warm paper, dark olive ink and burnt orange emphasis frame a Korean introduction to the project. Large, closely tracked headings establish hierarchy; quieter descriptions and ruled lists carry the implementation details. The page explains the personal bot before introducing code.\n\nThis scan documents `docs/how-it-works.html`, with `docs/assets/overview.css` and `docs/assets/overview.js` as implementation authority. `docs/digest-preview.html` has an independent Telegram comparison design. `docs/design-showcase.html` is a historical prototype, not authority for the current overview. The owner-supplied robot PNG is used in the header and hero, and reused by README.md. The format comparison prototype is not linked from the introduction.",
+    "keyCharacteristics": [
+      "Generous Korean type hierarchy with a locally bundled variable font.",
+      "Warm, flat surfaces divided by fine rules.",
+      "Dark selected controls and a dark operating schedule.",
+      "Functional step selection, source filtering and native disclosures.",
+      "Owner-supplied news robot artwork reused in the introduction and README."
+    ],
+    "rules": [],
+    "dos": [
+      "**Do** use the current overview stylesheet as the source of truth for tokens and responsive behavior.",
+      "**Do** preserve Korean word boundaries, source attribution and visible keyboard focus.",
+      "**Do** pair selected colors with semantic state and explanatory text.",
+      "**Do** label examples and proposed changes so they remain distinguishable from implemented behavior."
+    ],
+    "donts": [
+      "**Don't** reuse the historical showcase's cobalt palette or fixed sidebar for the current overview.",
+      "**Don't** infer a shared visual system from the independent digest comparison page.",
+      "**Don't** invent subscriber metrics, live operating status or signup functionality.",
+      "**Don't** replace text, processing controls or source rows with flattened bitmap compositions."
+    ]
+  }
+}

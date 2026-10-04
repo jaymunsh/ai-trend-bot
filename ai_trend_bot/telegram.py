@@ -12,30 +12,26 @@ SEOUL: Final = ZoneInfo("Asia/Seoul")
 # Telegram rejects sendMessage over 4096 characters. The margin absorbs HTML entity
 # expansion (&#x27; is 6 characters for one quote) that is invisible in the source text.
 TELEGRAM_SAFE_LENGTH: Final = 3_800
-# Width reserved for the " [10/10]" counter appended to split messages.
+# Width reserved for the " (10/10)" counter appended to split messages.
 COUNTER_RESERVE: Final = 10
-DIVIDER: Final = "────────────────"
-SEPARATOR: Final = f"\n\n{DIVIDER}\n\n"
+SEPARATOR: Final = "\n\n"
 WEEKDAYS: Final = ("월", "화", "수", "목", "금", "토", "일")
 NOON: Final = 12
 EVENING: Final = 18
 
 
-def _slot(hour: int) -> tuple[str, str]:
+def _slot(hour: int) -> str:
     if hour < NOON:
-        return "🌅", "아침"
+        return "🌤️"
     if hour < EVENING:
-        return "☀️", "점심"
-    return "🌙", "저녁"
+        return "☀️"
+    return "🌙"
 
 
 def render_header(now: datetime, count: int) -> str:
-    emoji, slot = _slot(now.hour)
-    return "\n".join(
-        (
-            f"{emoji}  <b>AI 트렌드 브리핑</b> · {slot} {now:%H:%M}",
-            f"{now.month}월 {now.day}일 ({WEEKDAYS[now.weekday()]}) · {count}건",
-        ),
+    return (
+        f"<b>{_slot(now.hour)} AI 브리핑 · "
+        f"{now.month}/{now.day} ({WEEKDAYS[now.weekday()]}) · {count}건</b>"
     )
 
 
@@ -43,16 +39,39 @@ def _link(label: str, url: str) -> str:
     return f'<a href="{html.escape(url, quote=True)}">{html.escape(label)}</a>'
 
 
-def _section(index: int, item: DigestItem) -> str:
-    links = " · ".join(
-        (_link(item.source_label, str(item.source_url)), *(_link(label, url) for label, url in item.also)),
-    )
-    lines = [f"<b>{index:02d}. {html.escape(item.title)}</b>"]
-    if item.category:
-        lines.append(f"[{html.escape(item.category)}]")
+def _section(index: int, item: DigestItem, *, summary: str | None = None) -> str:
+    outlets = {label.strip().casefold() for label, _ in item.also if label.strip()}
+    outlets.add(item.source_label.strip().casefold())
+    additional = len(outlets) - 1
+    source = _link(item.source_label, str(item.source_url))
+    if additional:
+        source += f" 외 {additional}곳"
     # "원문:" spelled out — an outlet name on its own does not read as a tappable link.
-    lines += ["", html.escape(item.summary), "", f"↳ 원문: {links}"]
-    return "\n".join(lines)
+    return "\n".join(
+        (
+            f"<b>{index:02d}. [{html.escape(item.title)}]</b>",
+            html.escape(item.summary if summary is None else summary),
+            f"원문: {source}",
+        )
+    )
+
+
+def _fit_section(index: int, item: DigestItem, room: int) -> str:
+    section = _section(index, item)
+    if len(section) <= room:
+        return section
+    if len(_section(index, item, summary="…")) > room:
+        msg = "기사 제목·출처 링크가 텔레그램 메시지 상한을 초과했습니다."
+        raise ValueError(msg)
+    # Truncate plain text BEFORE escaping, retaining the source link and complete HTML.
+    low, high = 0, len(item.summary)
+    while low < high:
+        middle = (low + high + 1) // 2
+        if len(_section(index, item, summary=item.summary[:middle] + "…")) <= room:
+            low = middle
+        else:
+            high = middle - 1
+    return _section(index, item, summary=item.summary[:low] + "…")
 
 
 def render_digest_chunks(
@@ -65,7 +84,7 @@ def render_digest_chunks(
     Pairing lets the caller record delivery per message, so a failure partway
     through does not re-send what already arrived.
     """
-    # The "[1/3]" counter is appended after splitting, once the total is known, so its
+    # The "(1/3)" counter is appended after splitting, once the total is known, so its
     # width is reserved up front rather than pushing a finished message over the limit.
     budget = max_length - COUNTER_RESERVE
     room = budget - len(header) - len(SEPARATOR)
@@ -73,9 +92,7 @@ def render_digest_chunks(
     sections: list[str] = []
     carried: list[DigestItem] = []
     for index, item in enumerate(items, start=1):
-        # ponytail: truncate a single oversized section rather than splitting it across
-        # messages, which would break its HTML tags. Revisit if summaries reach ~3KB.
-        section = _section(index, item)[:room]
+        section = _fit_section(index, item, room)
         if sections and len(SEPARATOR.join((header, *sections, section))) > budget:
             chunks.append((SEPARATOR.join((header, *sections)), tuple(carried)))
             sections, carried = [], []
@@ -92,9 +109,9 @@ def render_digest_chunks(
 
 
 def _number_header(message: str, position: int, total: int) -> str:
-    """Mark a split message as `[1/3]` at the end of the header's first line."""
+    """Mark a split message as `(1/3)` at the end of the header's first line."""
     first, separator, rest = message.partition("\n")
-    return f"{first} [{position}/{total}]{separator}{rest}"
+    return f"{first} ({position}/{total}){separator}{rest}"
 
 
 @final

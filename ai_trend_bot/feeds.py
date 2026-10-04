@@ -1,6 +1,7 @@
+import asyncio
 import calendar
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import ClassVar, Final, final
 
 import feedparser
@@ -43,6 +44,7 @@ def parse_feed(payload: bytes, source_name: str, priority: int) -> tuple[RawItem
                     text=text,
                     url=HttpUrl(link),
                     published_at=published_at,
+                    published_at_known=published is not None,
                     priority=priority,
                 ),
             )
@@ -113,6 +115,7 @@ def parse_hugging_face(payload: bytes, source_name: str, priority: int) -> tuple
             ),
             url=HttpUrl(f"https://huggingface.co/{model.id}"),
             published_at=model.lastModified or model.createdAt or datetime.now(tz=UTC),
+            published_at_known=model.lastModified is not None or model.createdAt is not None,
             priority=priority,
         )
         for model in HuggingFacePage.model_validate_json(payload).root
@@ -132,8 +135,30 @@ class FeedClient:
     def __init__(self, client: httpx2.AsyncClient) -> None:
         self._client = client
 
-    async def fetch(self, source: FeedSource) -> tuple[RawItem, ...]:
+    async def fetch(self, source: FeedSource, *, now: datetime | None = None) -> tuple[RawItem, ...]:
+        if source.kind == FeedKind.HACKER_NEWS:
+            cutoff = int(((now or datetime.now(tz=UTC)) - timedelta(hours=48)).timestamp())
+            responses = await asyncio.gather(
+                *(
+                    self._client.get(
+                        str(source.url),
+                        params={
+                            "tags": "story",
+                            "query": keyword,
+                            "numericFilters": f"created_at_i>={cutoff}",
+                            "hitsPerPage": 100,
+                        },
+                    )
+                    for keyword in ("AI", "LLM", "OpenAI", "Anthropic")
+                )
+            )
+            unique: dict[str, RawItem] = {}
+            for response in responses:
+                response.raise_for_status()
+                for item in parse_hacker_news(response.content, source.name, feed_priority(source.category)):
+                    unique.setdefault(item.key, item)
+            return tuple(unique.values())
         response = await self._client.get(str(source.url))
         response.raise_for_status()
-        parsed = PARSERS[source.kind](response.content, source.name, feed_priority(source.category))
-        return parsed[: source.max_items]
+        # The collector applies caps AFTER excluding already sent / old entries.
+        return PARSERS[source.kind](response.content, source.name, feed_priority(source.category))

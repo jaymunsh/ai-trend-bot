@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Final
+from zoneinfo import ZoneInfo
 
 import anyio
 import httpx2
@@ -15,6 +16,7 @@ from ai_trend_bot.feeds import FeedClient
 from ai_trend_bot.gemini import GeminiClient, SummaryMismatchError
 from ai_trend_bot.http_client import create_async_client
 from ai_trend_bot.pipeline import BotPipeline, PipelineClients, RunOptions, RunResult
+from ai_trend_bot.scheduling import delivery_target
 from ai_trend_bot.store import SentLog
 from ai_trend_bot.telegram import TelegramClient, render_digest_chunks
 
@@ -37,6 +39,8 @@ class CliRunSettings:
     limit: int
     dry_run: bool
     show_dropped: bool
+    scheduled: bool = False
+    min_gap_hours: float = 0
 
 
 @app.callback()
@@ -71,18 +75,29 @@ def check_config(
 
 
 @app.command("run")
-def run_digest(
+def run_digest(  # noqa: PLR0913 — each parameter is a user-facing CLI option
+    *,
     config: Annotated[Path, typer.Option("--config", exists=True, dir_okay=False)] = DEFAULT_CONFIG_PATH,
-    limit: Annotated[int, typer.Option("--limit", min=1, max=40)] = 30,
+    limit: Annotated[int, typer.Option("--limit", min=1, max=50)] = 50,
     dry_run: Annotated[bool, typer.Option("--dry-run/--send")] = True,
     show_dropped: Annotated[bool, typer.Option("--show-dropped/--no-show-dropped")] = True,
     min_gap_hours: Annotated[float, typer.Option("--min-gap-hours", min=0)] = 0,
+    scheduled: Annotated[
+        bool, typer.Option("--scheduled/--immediate", help="준비 후 설정된 발송 시각까지 대기")
+    ] = False,
 ) -> None:
     """Collect, triage, summarize, and optionally send one digest run."""
     if not dry_run and _sent_within(min_gap_hours):
         console.print(f"[yellow]최근 {min_gap_hours:g}시간 안에 발송한 기록이 있어 건너뜁니다.[/yellow]")
         return
-    settings = CliRunSettings(config_path=config, limit=limit, dry_run=dry_run, show_dropped=show_dropped)
+    settings = CliRunSettings(
+        config_path=config,
+        limit=limit,
+        dry_run=dry_run,
+        show_dropped=show_dropped,
+        scheduled=scheduled,
+        min_gap_hours=min_gap_hours,
+    )
     try:
         result = anyio.run(_execute, settings)
     except httpx2.HTTPStatusError as error:
@@ -91,7 +106,7 @@ def run_digest(
     except httpx2.RequestError as error:
         console.print("[red]외부 API 네트워크 오류가 발생했습니다.[/red]")
         raise typer.Exit(code=1) from error
-    except (ValidationError, SummaryMismatchError) as error:
+    except (ValueError, SummaryMismatchError) as error:
         console.print(f"[red]응답 처리 오류:[/red] {error}")
         raise typer.Exit(code=1) from error
 
@@ -100,7 +115,9 @@ def run_digest(
 
 def _report(settings: CliRunSettings, result: RunResult) -> None:
     for warning in result.warnings:
-        console.print(f"[yellow]건너뜀:[/yellow] {warning}")
+        console.print(f"[yellow]경고:[/yellow] {warning}")
+    if result.skipped:
+        return
     # 발송 회차에도 찍는다. 드라이런은 다른 시각의 다른 후보 집합을 보므로,
     # "이 브리핑이 무엇을 버렸는가"에는 그 회차 자신만 답할 수 있다.
     if settings.show_dropped:
@@ -134,6 +151,11 @@ def _sent_within(hours: float) -> bool:
 
 async def _execute(settings: CliRunSettings) -> RunResult:
     config = load_app_config(settings.config_path)
+    target = (
+        delivery_target(datetime.now(tz=ZoneInfo(config.delivery.timezone)), config.delivery.send_times)
+        if settings.scheduled and not settings.dry_run
+        else None
+    )
     secrets = RuntimeSecrets()
     async with create_async_client() as client:
         clients = PipelineClients(
@@ -147,4 +169,17 @@ async def _execute(settings: CliRunSettings) -> RunResult:
             ),
         )
         pipeline = BotPipeline(clients, SentLog(sent_log_path()), EDITORIAL_PATH)
-        return await pipeline.run(config, RunOptions(limit=settings.limit, dry_run=settings.dry_run))
+        return await pipeline.run(
+            config,
+            RunOptions(
+                limit=settings.limit, dry_run=settings.dry_run, send_at=target, min_gap_hours=settings.min_gap_hours
+            ),
+        )
+
+
+@app.command("archive-log")
+def archive_log() -> None:
+    """Move past delivery months to permanent archives without sending anything."""
+    path = sent_log_path()
+    SentLog(path).rotate()
+    console.print(f"[green]월별 기록 정리 완료:[/green] {path.parent / 'archive'}")

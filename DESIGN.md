@@ -1,171 +1,196 @@
-# AI Trend Bot Overview Design System
+---
+name: AI Trend Bot
+description: A Korean editorial introduction to a personal AI news briefing bot.
+colors:
+  canvas: "#f4f2eb"
+  paper: "#fffef9"
+  ink: "#20291f"
+  muted: "#62685d"
+  rule: "#d2d3c8"
+  accent: "#ae4d20"
+  accent-soft: "#efe0d3"
+  dark: "#202d27"
+  dark-ink: "#f4f2eb"
+  dark-muted: "#c0cbbb"
+  dark-rule: "#4c5c50"
+typography:
+  display:
+    fontFamily: 'Pretendard, "Apple SD Gothic Neo", sans-serif'
+    fontSize: "clamp(44px, 5.35vw, 72px)"
+    fontWeight: 850
+    lineHeight: 1.19
+    letterSpacing: "-0.04em"
+  headline:
+    fontFamily: 'Pretendard, "Apple SD Gothic Neo", sans-serif'
+    fontSize: "clamp(26px, 3.2vw, 40px)"
+    fontWeight: 750
+    lineHeight: 1.3
+    letterSpacing: "-0.03em"
+  title:
+    fontFamily: 'Pretendard, "Apple SD Gothic Neo", sans-serif'
+    fontSize: "25px"
+    fontWeight: 700
+    lineHeight: 1.4
+    letterSpacing: "-0.02em"
+  body:
+    fontFamily: 'Pretendard, "Apple SD Gothic Neo", sans-serif'
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.75
+  label:
+    fontFamily: 'Pretendard, "Apple SD Gothic Neo", sans-serif'
+    fontSize: "14px"
+    fontWeight: 550
+  mono:
+    fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace"
+    fontSize: "0.88em"
+rounded:
+  button: "6px"
+  filter: "5px"
+spacing:
+  space-2: "8px"
+  space-3: "12px"
+  space-4: "16px"
+  space-5: "20px"
+  space-6: "24px"
+  space-8: "32px"
+  space-12: "48px"
+  space-20: "80px"
+components:
+  button-primary:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.button}"
+    padding: "14px 20px"
+  button-primary-hover:
+    backgroundColor: "{colors.dark-rule}"
+  text-link:
+    textColor: "{colors.ink}"
+  navigation:
+    textColor: "{colors.muted}"
+    typography: "{typography.label}"
+  filter:
+    textColor: "{colors.muted}"
+    rounded: "{rounded.filter}"
+    padding: "10px 14px"
+  filter-selected:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+  pipeline-step:
+    textColor: "{colors.ink}"
+    padding: "22px 20px 24px"
+  pipeline-step-selected:
+    backgroundColor: "{colors.dark}"
+    textColor: "{colors.paper}"
+  stage-panel:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    padding: "36px 32px"
+  disclosure:
+    textColor: "{colors.ink}"
+    padding: "18px 0"
+  schedule:
+    backgroundColor: "{colors.dark}"
+    textColor: "{colors.dark-ink}"
+---
 
-## 0. Research Log
+# Design System: AI Trend Bot
 
-- Embedded refs: shortlisted Notion, Linear, GitBook → picked Minimalist + Notion because a long Korean technical brief needs warm editorial hierarchy, quiet navigation, and dense information without dashboard decoration.
-- UI/UX DB: 1 design-system query → kept the content-first newsletter structure and system-font performance guidance; rejected the suggested pink accent and oversized display type because they compete with operational content.
-- Lazyweb: 3 queries, 5 screens viewed (Better Stack, ButterDocs, Coda, GitBook, n8n) → took the slim rail, bordered metric strip, wide reading canvas, and low-chrome tables; did not copy brand assets or screen compositions.
-- Imagen drafts: `/Users/sunghyuk/.codex/generated_images/019fba75-1b68-73d3-93b5-06f11e1dd8f9/exec-e36e2a42-5a1f-4b68-9e85-c3823b04d7f5.png`, `/Users/sunghyuk/.codex/generated_images/019fba75-1b68-73d3-93b5-06f11e1dd8f9/exec-11aa808c-3a70-4f86-a1fa-31bd7e6daa36.png` → picked the second draft as the direction contract because its numbered rail, factual density, and restrained hierarchy suit a system overview.
-- Reference status: all external screens and generated drafts are direction references, not pixel targets. The final page is an original implementation grounded in the repository facts.
+## Overview
 
-## 1. Atmosphere & Identity
+**Creative North Star: "The Korean Editorial Brief"**
 
-A quiet operations handbook: factual, calm, and easy to scan even when the reader does not know the codebase. The signature is the **blue ledger line** — one restrained cobalt rule that links navigation, status, diagrams, and schedule markers across a warm paper canvas.
+Warm paper, dark olive ink and burnt orange emphasis frame a Korean introduction to the project. Large, closely tracked headings establish hierarchy; quieter descriptions and ruled lists carry the implementation details. The page explains the personal bot before introducing code.
 
-Primary persona: the project owner checking what is built, what runs automatically, and what remains. Secondary persona: a friend or future maintainer with no prior code context. Stress contexts include a 375px phone, 200% zoom, keyboard-only navigation, reduced motion, and dense Korean text.
+This scan documents `docs/how-it-works.html`, with `docs/assets/overview.css` and `docs/assets/overview.js` as implementation authority. `docs/digest-preview.html` has an independent Telegram comparison design. `docs/design-showcase.html` is a historical prototype, not authority for the current overview. The overview uses HTML, CSS and inline SVG for content and diagrams. The owner-supplied transparent robot image at `docs/assets/ai-news-robot.png` appears in the header and hero; README.md references that same asset. The format comparison prototype is not linked from this introduction.
 
-## 2. Color
+**Key Characteristics:**
 
-| Role              | Token                   |     Light | Usage                      |
-| ----------------- | ----------------------- | --------: | -------------------------- |
-| Canvas            | `--surface-canvas`      | `#F7F6F3` | Page background            |
-| Primary surface   | `--surface-primary`     | `#FFFEFC` | Main reading surface       |
-| Secondary surface | `--surface-secondary`   | `#F1F0EC` | Quiet panels and code      |
-| Ink               | `--text-primary`        | `#242628` | Headings and body          |
-| Muted ink         | `--text-secondary`      | `#656965` | Supporting copy            |
-| Faint ink         | `--text-tertiary`       | `#5F635E` | Metadata                   |
-| Default rule      | `--border-default`      | `#D9D9D3` | Cards and tables           |
-| Subtle rule       | `--border-subtle`       | `#E9E8E3` | Internal separators        |
-| Primary accent    | `--accent-primary`      | `#1459C7` | Links, focus, active state |
-| Accent hover      | `--accent-hover`        | `#0C439A` | Interactive hover          |
-| Accent tint       | `--accent-soft`         | `#EAF1FD` | Active nav and info panels |
-| Success           | `--status-success`      | `#246B45` | Operating status           |
-| Success tint      | `--status-success-soft` | `#E8F3EC` | Success badges             |
-| Warning           | `--status-warning`      | `#9B5D12` | Deferred or caution state  |
-| Warning tint      | `--status-warning-soft` | `#FBF0DD` | Warning panels             |
-| Error             | `--status-error`        | `#A63A32` | Error showcase only        |
-| Error tint        | `--status-error-soft`   | `#F9E9E7` | Error showcase only        |
+- Generous Korean type hierarchy with a locally bundled variable font.
+- Warm, flat surfaces divided by fine rules.
+- Dark selected controls and a dark operating schedule.
+- Functional step selection, source filtering and native disclosures.
 
-Rules: accent is functional, never decorative; status always includes text; no color outside this table; contrast target is WCAG 2.2 AA.
+## Colors
 
-## 3. Typography
+Burnt orange supplies the primary accent; warm neutrals and olive ink carry the reading surface.
 
-| Level    |                           Size | Weight | Line height |   Tracking | Usage           |
-| -------- | -----------------------------: | -----: | ----------: | ---------: | --------------- |
-| Display  | `clamp(2.75rem, 7vw, 5.25rem)` |    700 |        1.02 | `-0.045em` | Hero title      |
-| H1       |                         `2rem` |    700 |         1.2 | `-0.025em` | Major section   |
-| H2       |                       `1.5rem` |    700 |         1.3 | `-0.015em` | Subsection      |
-| H3       |                     `1.125rem` |    700 |         1.4 | `-0.005em` | Card title      |
-| Body/lg  |                     `1.125rem` |    400 |         1.7 |        `0` | Lead copy       |
-| Body     |                         `1rem` |    400 |         1.7 |        `0` | Default copy    |
-| Body/sm  |                     `0.875rem` |    400 |        1.55 |        `0` | Supporting copy |
-| Caption  |                      `0.75rem` |    600 |        1.45 |   `0.02em` | Metadata        |
-| Overline |                    `0.6875rem` |    700 |         1.3 |   `0.12em` | Section labels  |
+The sidecar's generated tonal ramps support color previews; they are not additional implemented palette tokens.
 
-- Primary: `ui-sans-serif, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif`.
-- Editorial display: `"Iowan Old Style", "Noto Serif KR", Georgia, serif`.
-- Mono: `ui-monospace, SFMono-Regular, Menlo, monospace`.
-- Body never drops below 14px. Korean headings use `word-break: keep-all`; long URLs use `overflow-wrap: anywhere`.
+### Primary
 
-## 4. Spacing & Layout
+- **Burnt Orange — `accent`:** highlighted hero text, active navigation, focus outlines and small explanatory labels.
+- **Orange Wash — `accent-soft`:** step hover and text selection.
 
-Base unit: **4px**.
+### Neutral
 
-| Token        | Value | Usage              |
-| ------------ | ----: | ------------------ |
-| `--space-1`  |   4px | Tight              |
-| `--space-2`  |   8px | Inline             |
-| `--space-3`  |  12px | Compact            |
-| `--space-4`  |  16px | Standard           |
-| `--space-5`  |  20px | Comfortable        |
-| `--space-6`  |  24px | Card               |
-| `--space-8`  |  32px | Group              |
-| `--space-10` |  40px | Section inner      |
-| `--space-12` |  48px | Major break        |
-| `--space-16` |  64px | Page rhythm        |
-| `--space-20` |  80px | Hero               |
-| `--space-24` |  96px | Maximum separation |
+- **Warm Paper — `canvas`:** page and sticky header background.
+- **Light Paper — `paper`:** stage detail panel and text on dark controls.
+- **Olive Ink — `ink`:** headings, primary actions and selected source filters.
+- **Muted Olive — `muted`:** supporting text, metadata and inactive navigation.
+- **Paper Rule — `rule`:** section, row and control boundaries.
+- **Deep Olive — `dark`:** selected processing step and operating section; `dark-ink`, `dark-muted` and `dark-rule` provide their text and separators.
 
-- Max shell width: 1440px; rail: 248px; reading measure: 1120px.
-- Desktop uses a fixed left rail and broad content column. The hero intentionally leaves more whitespace on the right to establish editorial hierarchy.
-- At 1024px the rail becomes horizontal; at 768px metrics and two-column sections collapse; at 640px everything becomes one readable column.
-- Tables may scroll inside a labelled wrapper; the primary page never scrolls horizontally.
+## Typography
 
-## 5. Components
+**Display and Body Font:** Pretendard, with Apple SD Gothic Neo and sans-serif fallbacks. The variable WOFF2 is bundled in `docs/assets/`, preloaded by the HTML and declared for weights 100–900 with `font-display: swap`.
 
-### TOC Link
+**Code Font:** the system monospace stack in the frontmatter. Code appears inside expandable technical content and answers.
 
-- **Structure**: anchor with two-digit index and label.
-- **States**: default, hover, active (`aria-current`), focus-visible.
-- **Accessibility**: native anchor, 44px minimum hit area, visible focus.
-- **Layout**: vertical stack in the sticky rail; horizontal scroll list at smaller widths.
+The desktop display, headline and stage title roles above are extracted directly from CSS. Lead copy uses 18px with a 1.8 line height and a 42ch maximum measure. Supporting descriptions range from 13–16px; 11–12px text is reserved for compact metadata. Stage descriptions are limited to 62ch. Schedule times use tabular numerals, a 550 weight and `clamp(40px, 5vw, 68px)`.
 
-### Status Badge
+Headings use balanced wrapping. Korean headings and paragraphs preserve word boundaries with `word-break: keep-all`; long strings can wrap with `overflow-wrap: anywhere`. Mobile display overrides and other responsive changes remain in CSS rather than being separate global roles.
 
-- **Structure**: text label plus CSS dot.
-- **Variants**: success, warning, neutral.
-- **States**: static; color is never the sole signal.
-- **Accessibility**: readable text announces the status.
+## Layout
 
-### Metric Tile
+The centered content width is capped at 1184px. Desktop gutters total 96px, narrowing to 64px at 1060px, 40px at 760px and 32px at 360px. The header is sticky, with section anchors and a repository link. Mobile navigation moves into a second horizontal row.
 
-- **Structure**: overline, tabular value, one-line explanation.
-- **Variants**: standard and emphasized.
-- **States**: static; long labels wrap without clipping.
-- **Layout**: responsive auto-fit grid.
+Desktop sections combine asymmetric two-column reading layouts, a five-column processing rail and ruled source lists. Most major sections use 80–88px vertical spacing. At 760px, hero, principles, stage detail, editorial introduction and FAQ become single-column; section spacing reduces to 48–56px. Processing controls become stacked rows. The source registry retains three narrower columns, and the schedule retains its three time columns. Editorial rule columns stack at 360px.
 
-### Diagram Panel
+## Elevation & Depth
 
-- **Structure**: figure, heading, Mermaid source, figcaption, text fallback.
-- **Variants**: architecture, sequence, lifecycle.
-- **States**: loading text before Mermaid renders; readable fallback if the CDN is unavailable.
-- **Accessibility**: explanatory caption and adjacent text summary; diagram color is not the only carrier.
+There are no box shadows. Fine borders and changes between paper and dark olive provide separation. A small rotated square connects the selected processing step to its explanatory panel. Depth comes from content hierarchy and state rather than lifted containers.
 
-### Data Table
+## Shapes
 
-- **Structure**: labelled overflow wrapper, table, caption, semantic head/body.
-- **Variants**: source registry, priority matrix, test evidence.
-- **States**: normal and narrow scroll.
-- **Accessibility**: real table markup, scoped headers, persistent caption.
+Reading sections and stage panels are square. Primary actions have gently rounded corners; source filters use a slightly smaller radius. The representative robot retains the supplied PNG transparency and proportions, without cropping or geometric masks. Inline SVG supplies compact line icons; the header uses a 40px version of the robot asset. The unused `--radius` declaration is not a component shape contract.
 
-### Callout
+## Components
 
-- **Structure**: title, status label, body, optional checklist.
-- **Variants**: info, success, warning, error.
-- **States**: static; error variant exists for the primitive showcase only.
-- **Accessibility**: border, label, and text reinforce color.
+### Actions and navigation
 
-### Timeline Stop
+The primary anchor uses olive ink with light paper text and a 50px minimum height; hover changes its background to `dark-rule`. Text links use small inline arrows and gain an orange underline on hover. Navigation uses muted text, orange hover and an orange underline for `aria-current="true"`; JavaScript updates that state while sections enter view. Global keyboard focus is a 2px orange outline with a 5px offset. The page includes a skip link.
 
-- **Structure**: time, ordinal, count, explanation.
-- **Variants**: morning, afternoon, evening using the same accent family.
-- **States**: static; reflows vertically on mobile.
-- **Accessibility**: ordered-list semantics; chronological order remains in DOM.
+### Processing rail and detail panel
 
-### Code Block
+Five native buttons select collection, selection, article extraction, Korean summarization and delivery. Selected buttons use dark olive, light text and `aria-pressed`; unselected buttons show an orange wash on hover. Clicking updates the title, explanation and definition list in an `aria-live="polite"` panel. This is an interactive explanation of the implemented processing steps, not a live progress indicator. The panel uses light paper, a fine border and a desktop two-column split.
 
-- **Structure**: pre/code with a visible purpose label.
-- **States**: horizontal overflow only within the block.
-- **Accessibility**: selectable text and sufficient contrast.
+### Source filters and rows
 
-## 6. Motion & Interaction
+Rounded filter buttons group the configured sources; selected filters invert to ink and paper. Hover changes the border and text to orange. JavaScript hides unmatched rows and updates a polite live count. Each ruled row presents the source, retrieval method and candidate cap; numbers use tabular numerals. There is no search field.
 
-| Type     | Duration | Easing      | Usage              |
-| -------- | -------: | ----------- | ------------------ |
-| Micro    |    140ms | ease-out    | Link/button hover  |
-| Standard |    220ms | ease-in-out | Details disclosure |
+### Representative image
 
-- Only color, background-color, border-color, transform, and opacity may transition.
-- No decorative entrance animation. Smooth scrolling is the only page motion and is disabled under `prefers-reduced-motion`.
-- The print button and links provide hover, active, and focus-visible feedback. Static cards do not pretend to be clickable.
+The owner-supplied robot is the hero artwork, capped at 440px on desktop and 280px on mobile. Explicit intrinsic dimensions prevent layout shift. The same image is used in the header at 40px and in README.md at 220px. The introduction has no message-format switch or comparison link.
 
-## 7. Depth & Surface
+### Schedule and disclosures
 
-Strategy: **borders-only with tonal shift**. Surfaces are separated by 1px rules and warm tonal changes. No gradients, glass effects, or box shadows. Radius scale is restrained: 4px for tags, 8px for panels, 12px only for the hero summary.
+The dark operating section displays three large tabular times in a bordered ordered list, followed by a compact runtime flow and notes. Native `details` elements reveal technical information and FAQ answers; their plus sign rotates when open. The footer print action invokes browser printing, temporarily opens disclosures and restores them afterward.
 
-## 8. Accessibility Constraints & Accepted Debt
+Processing hover and disclosure indicators use 160ms ease-out transitions. Desktop hero copy enters over 650ms at widths of at least 1000px. Reduced motion disables animation, transitions and smooth scrolling. Print styles remove navigation and controls and render the operating section on white.
 
-### Constraints
+## Do's and Don'ts
 
-- WCAG target: 2.2 AA, contrast floor 4.5:1 for body and 3:1 for large text and UI boundaries.
-- Skip link, semantic landmarks, sequential headings, visible keyboard focus, 44px touch targets.
-- 200% zoom and 375px viewport must preserve every section with no primary horizontal overflow.
-- Reduced motion honored. Korean text must not clip, lose descenders, or create avoidable single-character orphan lines.
-- Mermaid diagrams always have plain-language captions and summaries.
+### Do:
 
-### Accepted Debt
+- **Do** use the current overview stylesheet as the source of truth for tokens and responsive behavior.
+- **Do** preserve Korean word boundaries, source attribution and visible keyboard focus.
+- **Do** pair selected colors with semantic state and explanatory text.
+- **Do** label examples and proposed changes so they remain distinguishable from implemented behavior.
 
-| Item                                             | Location                          | Why accepted                                                                                                                                         | Owner / Exit                                                                |
-| ------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Mermaid needs a network connection on first open | `docs/how-it-works.html` | A plain-language fallback keeps the content available offline; bundling the library would add a large generated dependency to this small repository. | Bundle Mermaid locally if fully offline distribution becomes a requirement. |
-| No dark theme                                    | Entire document                   | The requested artifact is a printable operational brief; one carefully verified light theme is clearer and smaller.                                  | Add only if the owner requests ongoing web publication.                     |
+### Don't:
+
+- **Don't** reuse the historical showcase's cobalt palette or fixed sidebar for the current overview.
+- **Don't** infer a shared visual system from the independent digest comparison page.
+- **Don't** invent subscriber metrics, live operating status or signup functionality.
+- **Don't** replace text, processing controls or source rows with flattened bitmap compositions.

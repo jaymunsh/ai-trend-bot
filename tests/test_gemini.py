@@ -1,8 +1,13 @@
+# pyright: reportPrivateUsage=false
+import asyncio
 from datetime import UTC, datetime
+from typing import cast
+from unittest.mock import AsyncMock
 
+import httpx2
 from pydantic import HttpUrl
 
-from ai_trend_bot.gemini import parse_summary
+from ai_trend_bot.gemini import GeminiClient, parse_summary
 from ai_trend_bot.models import RawItem, SourceKind
 
 
@@ -72,3 +77,51 @@ def test_parse_summary_separates_structured_summary_labels() -> None:
     digest = parse_summary(payload, raw_items)
 
     assert digest[0].summary == ("핵심: 새 모델 공개.\n왜 중요한가: 처리량 개선.\n관련 대상: ML 플랫폼 팀.")
+
+
+def test_triage_passes_missing_date_as_unknown_to_model():
+
+    raw = RawItem(
+        source="Example",
+        source_kind=SourceKind.FEED,
+        title="Undated",
+        text="facts",
+        url=HttpUrl("https://example.com/news"),
+        published_at=datetime.now(tz=UTC),
+        published_at_known=False,
+        priority=20,
+    )
+
+    async def run():
+        async with httpx2.AsyncClient() as client:
+            gemini = GeminiClient(client, "test", "test")
+            generate = AsyncMock(return_value='{"items":[]}')
+            gemini._generate = generate
+            await gemini.triage((raw,), editorial="facts", recent_events=())
+            return cast("str", generate.call_args.args[0])
+
+    assert '"published_at": null' in asyncio.run(run())
+
+
+def test_triage_distinguishes_simple_repetition_from_meaningful_followups():
+    raw = RawItem(
+        source="Example",
+        source_kind=SourceKind.FEED,
+        title="Followup",
+        text="new confirmed price",
+        url=HttpUrl("https://example.com/followup"),
+        published_at=datetime.now(tz=UTC),
+        priority=20,
+    )
+
+    async def run():
+        async with httpx2.AsyncClient() as client:
+            gemini = GeminiClient(client, "test", "test")
+            generate = AsyncMock(return_value='{"items":[]}')
+            gemini._generate = generate
+            await gemini.triage((raw,), editorial="facts", recent_events=())
+            return cast("str", generate.call_args.args[0])
+
+    prompt = asyncio.run(run())
+    assert "새 사실이 있는 후속 보도는 duplicate_of=null" in prompt
+    assert "단순 반복일 때만" in prompt

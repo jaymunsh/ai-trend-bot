@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from xml.etree import ElementTree as ET
 
 from pydantic import HttpUrl
 
@@ -21,11 +22,12 @@ def test_render_header_when_slot_changes() -> None:
     evening = render_header(datetime(2026, 8, 3, 19, 30, tzinfo=SEOUL), 1)
 
     # Then
-    assert "🌅" in morning
-    assert "아침 07:30" in morning
-    assert "8월 3일 (월) · 4건" in morning
+    assert "🌤️" in morning
+    assert morning == "<b>🌤️ AI 브리핑 · 8/3 (월) · 4건</b>"
+    assert "\n" not in morning
+    assert "트렌드" not in morning
     assert "🌙" in evening
-    assert "저녁 19:30" in evening
+    assert "8/3 (월) · 1건" in evening
 
 
 def test_render_digest_chunks_when_single_item() -> None:
@@ -108,7 +110,9 @@ def test_split_messages_are_numbered() -> None:
     chunks = render_digest_chunks(items, header, max_length=320)
 
     # Then
-    assert [message.splitlines()[0][-5:] for message, _ in chunks] == ["[1/3]", "[2/3]", "[3/3]"]
+    assert [message.splitlines()[0] for message, _ in chunks] == [
+        f"<b>🌤️ AI 브리핑 · 8/3 (월) · 3건</b> ({index}/3)" for index in range(1, 4)
+    ]
     # The counter is added after splitting, so it must still fit the limit.
     assert all(len(message) <= 320 for message, _ in chunks)
 
@@ -121,4 +125,41 @@ def test_single_message_is_not_numbered() -> None:
     ((message, _),) = render_digest_chunks((_item(1),), header)
 
     # Then
-    assert "[1/1]" not in message
+    assert "(1/1)" not in message
+
+
+def test_oversized_section_keeps_valid_html_and_representative_source():
+
+    item = _item(1, "<&>'" * 2000).model_copy(
+        update={"also": (("Other & Source", "https://other.example/news?q=1&x=2"),)}
+    )
+    ((message, carried),) = render_digest_chunks((item,), "header", max_length=350)
+    ET.fromstring(f"<root>{message}</root>")  # noqa: S314 — locally generated test HTML
+    assert '<a href="https://example.com/1">Example</a>' in message
+    assert "외 1곳" in message
+    assert message.count("</a>") == 1
+    assert len(message) <= 350
+    assert carried == (item,)
+
+
+def test_compact_digest_shows_only_representative_and_counts_distinct_outlets():
+    item = _item(1, "핵심 사실과 중요한 적용 조건을 전달합니다.").model_copy(
+        update={
+            "category": "정책·산업·자금",
+            "also": (
+                ("Example", "https://example.com/another"),
+                ("Other", "https://other.example/one"),
+                ("Other", "https://other.example/two"),
+                ("Third", "https://third.example/news"),
+            ),
+        }
+    )
+    ((message, carried),) = render_digest_chunks((item, _item(2)), "header")
+    assert message.count("<a href=") == 2
+    assert '원문: <a href="https://example.com/1">Example</a> 외 2곳' in message
+    assert "정책·산업·자금" not in message
+    assert "────" not in message
+    assert "<b>01. [소식 1]</b>\n핵심 사실" in message
+    assert "외 0곳" not in message
+    assert carried[0].also == item.also
+    assert len(carried[0].also) == 4

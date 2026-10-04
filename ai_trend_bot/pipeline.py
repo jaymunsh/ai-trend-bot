@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
 from typing import Final, final
@@ -14,12 +14,14 @@ from ai_trend_bot.enrich import fetch_body
 from ai_trend_bot.feeds import FeedClient
 from ai_trend_bot.gemini import GeminiClient
 from ai_trend_bot.models import DigestItem, RawItem
+from ai_trend_bot.scheduling import wait_until
 from ai_trend_bot.store import SentLog
 from ai_trend_bot.telegram import SEOUL, TelegramClient, render_header
-from ai_trend_bot.triage import Dropped, Selection, apply_triage
+from ai_trend_bot.triage import Dropped, Selected, Selection, apply_triage
 
 # Free-tier Gemini answers 503 to a few hundred candidates in one request; 100 is served reliably.
 TRIAGE_BATCH: Final = 100
+SUMMARY_BATCH: Final = 10
 # The first round judges each item on its own merits, which is the right question when
 # screening hundreds. Asked the same way twice, the second round just re-approves nearly
 # everything, so it is framed as picking a lineup instead.
@@ -27,7 +29,9 @@ FINAL_ROUND_GUIDANCE: Final = (
     "\n이것은 최종 선별입니다. 위 후보는 이미 1차를 통과한 것들이므로 개별적으로는 모두 그럴듯해 보입니다. "
     "지금 할 일은 재심사가 아니라 **오늘 브리핑에 실을 것을 고르는 것**입니다. "
     "서로 비교했을 때 상대적으로 약한 것, 같은 회사의 사소한 업데이트, "
-    "같은 사건의 다른 측면을 다룬 것은 keep=false로 떨어뜨리세요.\n"
+    "같은 사건을 새로운 사실 없이 반복한 것은 keep=false로 떨어뜨리세요. "
+    "같은 사건의 단순 반복은 대표 기사에 병합하되, 새 수치·확정된 결정·가격·출시일·추가 피해 등 "
+    "판단을 바꾸는 새 사실은 후속 보도여도 남기세요. 서로 다른 회사의 별개 발표를 병합하지 마세요.\n"
     "다만 **건수를 맞추려고 자르지 마세요.** 편집 방침의 '반드시 통과시킬 것'에 해당하면 "
     "그날 몇 건이 되든 남기세요. 특히 사고·보안 문제·규제·소송처럼 놓치면 안 되는 것은 "
     "다른 후보와 비교해 덜 화려해 보여도 남깁니다. "
@@ -41,6 +45,8 @@ FINAL_ROUND_GUIDANCE: Final = (
 class RunOptions:
     limit: int
     dry_run: bool
+    send_at: datetime | None = None
+    min_gap_hours: float = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +56,7 @@ class RunResult:
     header: str = ""
     dropped: tuple[Dropped, ...] = ()
     candidates: int = 0
+    skipped: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,7 +92,11 @@ class BotPipeline:
         enriched = await asyncio.gather(
             *(fetch_body(self._clients.http, selected.item) for selected in selection.kept),
         )
-        summaries = await self._clients.gemini.summarize(enriched)
+        # Small, sequential batches bound output size and avoid a five-request
+        # burst against the API quota. No partial digest is sent if one fails.
+        summaries: list[DigestItem] = []
+        for start in range(0, len(enriched), SUMMARY_BATCH):
+            summaries.extend(await self._clients.gemini.summarize(enriched[start : start + SUMMARY_BATCH]))
         digest = tuple(
             summary.model_copy(
                 update={
@@ -97,6 +108,23 @@ class BotPipeline:
             for summary, selected in zip(summaries, selection.kept, strict=True)
         )
 
+        if not options.dry_run:
+            if options.send_at is not None:
+                await wait_until(options.send_at)
+            # A manual run may have delivered while this process was preparing.
+            last = self._log.last_sent_at()
+            if (
+                options.min_gap_hours > 0
+                and last is not None
+                and (datetime.now(tz=UTC) - last < timedelta(hours=options.min_gap_hours))
+            ):
+                return RunResult(
+                    items=(),
+                    warnings=(*warnings, "대기 중 다른 발송이 있어 이번 회차를 건너뜁니다."),
+                    candidates=len(candidates),
+                    dropped=selection.dropped,
+                    skipped=True,
+                )
         header = render_header(datetime.now(tz=SEOUL), len(digest))
         if not options.dry_run:
             # Record per delivered message so a failure partway through does not re-send.
@@ -119,6 +147,8 @@ class BotPipeline:
         so the survivors — a few dozen — get one more pass that dedupes and ranks
         across the whole set.
         """
+        if not candidates:
+            return Selection(kept=(), dropped=())
         editorial = self._editorial_path.read_text(encoding="utf-8")
         recent = self._log.recent_events()
         batches = [candidates[start : start + TRIAGE_BATCH] for start in range(0, len(candidates), TRIAGE_BATCH)]
@@ -131,7 +161,10 @@ class BotPipeline:
         dropped = tuple(drop for result in screened for drop in result.dropped)
         survivors = tuple(selected.item for result in screened for selected in result.kept)
         if len(batches) == 1:
-            return Selection(kept=screened[0].kept[:limit], dropped=dropped)
+            return apply_triage(candidates, rounds[0], limit=limit)
+
+        if not survivors:
+            return Selection(kept=(), dropped=dropped)
 
         final = await self._clients.gemini.triage(
             survivors,
@@ -140,22 +173,63 @@ class BotPipeline:
             guidance=FINAL_ROUND_GUIDANCE,
         )
         settled = apply_triage(survivors, final, limit=limit)
-        return Selection(kept=settled.kept, dropped=(*dropped, *settled.dropped))
+        first_round = {selected.item.key: selected for result in screened for selected in result.kept}
+        preserved: list[Selected] = []
+        for selected in settled.kept:
+            merged = {other.key: other for other in first_round[selected.item.key].merged}
+            for representative in selected.merged:
+                merged[representative.key] = representative
+                merged.update((other.key, other) for other in first_round[representative.key].merged)
+            preserved.append(Selected(selected.item, selected.verdict, tuple(merged.values())))
+        return Selection(kept=tuple(preserved), dropped=(*dropped, *settled.dropped))
 
     async def _collect(self, config: AppConfig) -> tuple[tuple[RawItem, ...], list[str]]:
+        now = datetime.now(tz=UTC)
         warnings: list[str] = []
         fetched = await asyncio.gather(
             *(self._fetch(partial(self._clients.feeds.fetch, feed), feed.name) for feed in config.feeds),
         )
         raw_items: list[RawItem] = []
-        for items, warning in fetched:
-            raw_items.extend(items)
+        for source, (items, warning) in zip(config.feeds, fetched, strict=True):
             if warning:
                 warnings.append(warning)
-        unique = {item.key: item for item in raw_items}
-        ordered = sorted(unique.values(), key=lambda item: (item.priority, item.published_at), reverse=True)
+            eligible, uncertain = self._eligible(items, now)
+            raw_items.extend(eligible)
+            if uncertain:
+                warnings.append(f"{source.name}: 게시일 미상·오류 {uncertain}건 (48시간 이내 여부 확인 불가)")
+        # Prefer the strongest source that still has room. Do not discard another
+        # copy before accepting it: that copy can rescue an item beyond a cap.
+        ordered = sorted(
+            raw_items,
+            key=lambda item: (item.priority, item.published_at_known, min(item.published_at, now)),
+            reverse=True,
+        )
         unseen_keys = set(self._log.unseen(tuple(item.key for item in ordered)))
-        return tuple(item for item in ordered if item.key in unseen_keys), warnings
+        caps = {feed.name: feed.max_items for feed in config.feeds}
+        counts: dict[str, int] = {}
+        candidates: list[RawItem] = []
+        accepted: set[str] = set()
+        for item in ordered:
+            count = counts.get(item.source, 0)
+            if item.key in unseen_keys and item.key not in accepted and count < caps[item.source]:
+                candidates.append(item)
+                accepted.add(item.key)
+                counts[item.source] = count + 1
+        return tuple(candidates), warnings
+
+    @staticmethod
+    def _eligible(items: tuple[RawItem, ...], now: datetime) -> tuple[tuple[RawItem, ...], int]:
+        cutoff = now - timedelta(hours=48)
+        normalized = tuple(
+            item.model_copy(update={"published_at_known": False})
+            if item.published_at > now + timedelta(minutes=5)
+            else item
+            for item in items
+        )
+        uncertain = sum(not item.published_at_known for item in normalized)
+        return tuple(
+            item for item in normalized if not item.published_at_known or item.published_at >= cutoff
+        ), uncertain
 
     @staticmethod
     async def _fetch(

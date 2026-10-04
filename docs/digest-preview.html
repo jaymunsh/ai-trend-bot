@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>AI 브리핑 · 알림 미리보기</title>
+  <style>
+    :root {
+      --canvas: #101820;
+      --surface: #18242e;
+      --bubble: #20303e;
+      --ink: #f0f4f8;
+      --muted: #b4c4d2;
+      --accent: #73c5ff;
+      --rule: #364958;
+      --active: #294d67;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --message-width: 390px;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+      font-synthesis: none;
+      scrollbar-color: var(--rule) var(--canvas);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    ::selection { background: var(--active); color: var(--ink); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    .skip { position: absolute; top: -80px; left: 16px; padding: 12px; color: var(--ink); background: var(--active); z-index: 2; }
+    .skip:focus { top: 12px; }
+    main { max-width: 1180px; margin: auto; padding: var(--space-10) var(--space-8) var(--space-8); }
+    h1 { font-size: clamp(25px, 4vw, 32px); line-height: 1.3; letter-spacing: -.025em; margin: 0 0 var(--space-2); font-weight: 700; }
+    .intro { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; word-break: keep-all; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-6); padding-bottom: var(--space-6); border-bottom: 1px solid var(--rule); }
+    .switch { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+    .switch button { border: 1px solid transparent; border-radius: 8px; min-height: 44px; padding: 0 var(--space-4); background: transparent; color: var(--muted); cursor: pointer; transition: background-color 140ms ease-out, color 140ms ease-out; }
+    .switch button:hover { background: var(--surface); color: var(--ink); }
+    .switch button[aria-pressed="true"] { border-color: var(--rule); background: var(--active); color: var(--ink); }
+    .extra-control { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; color: var(--muted); font-size: 14px; cursor: pointer; }
+    input { accent-color: var(--accent); width: 17px; height: 17px; }
+    .comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-10); align-items: start; margin-top: var(--space-8); }
+    .comparison[data-view="compact"], .comparison[data-view="original"] { grid-template-columns: minmax(0, 1fr); }
+    .comparison[data-view="compact"] .original-panel, .comparison[data-view="original"] .compact-panel { display: none; }
+    .panel { min-width: 0; }
+    .panel-heading { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; max-width: var(--message-width); margin: 0 auto var(--space-4); }
+    .panel-heading h2 { font-size: 17px; margin: 0; font-weight: 650; }
+    .panel-heading p { font-size: 13px; color: var(--muted); margin: 0; font-variant-numeric: tabular-nums; }
+    .chat { width: 100%; max-width: var(--message-width); margin: auto; background: var(--canvas); }
+    .chat-title { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-3); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin-bottom: var(--space-4); }
+    .avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--active); color: var(--accent); flex: 0 0 auto; }
+    .avatar svg { width: 22px; height: 22px; }
+    .chat-title strong { display: block; font-size: 15px; font-weight: 650; }
+    .chat-title span { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .message { background: var(--bubble); border-radius: 16px 16px 16px 4px; padding: var(--space-5); font-size: 16px; line-height: 1.55; overflow-wrap: anywhere; }
+    .message-header { margin-bottom: var(--space-6); }
+    .message-header strong { font-size: 17px; font-weight: 700; }
+    .message-header p { margin: var(--space-1) 0 0; color: var(--muted); font-size: 14px; }
+    .article { margin: 0; }
+    .article + .article { margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--rule); }
+    .article h3 { font-size: 17px; line-height: 1.45; font-weight: 700; word-break: keep-all; margin: 0 0 var(--space-2); text-wrap: pretty; letter-spacing: -.012em; }
+    .number { color: var(--accent); margin-right: 7px; font-variant-numeric: tabular-nums; }
+    .article p { margin: 0; word-break: keep-all; }
+    .fact { line-height: 1.6; }
+    .impact { margin-top: var(--space-2) !important; color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .impact b { color: var(--ink); font-weight: 600; }
+    .sources { display: flex; flex-wrap: wrap; gap: 5px; margin-top: var(--space-3) !important; color: var(--accent); font-size: 13px; line-height: 1.6; }
+    .source-label { color: var(--muted); }
+    .source-separator { color: var(--muted); }
+    .time { margin-top: var(--space-3); text-align: right; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .original .message-header { margin-bottom: var(--space-6); }
+    .original .message-header strong { font-size: 16px; }
+    .original .message-header p { color: var(--ink); font-size: 16px; }
+    .original .article { border-top: 0; padding-top: 0; margin-top: 0; }
+    .original .article::before { content: ""; display: block; width: 72%; border-top: 1px solid var(--ink); margin: var(--space-8) 0; }
+    .original .article h3 { font-size: 16px; margin: 0; }
+    .original .category { margin-bottom: var(--space-6); }
+    .original .sources { margin-top: var(--space-6) !important; font-size: 16px; }
+    .notes { color: var(--muted); font-size: 13px; line-height: 1.7; max-width: 75ch; margin: var(--space-8) auto 0; }
+    .notes p { margin: 0 0 var(--space-2); }
+    [hidden] { display: none !important; }
+    @media (max-width: 700px) {
+      main { padding: var(--space-6) var(--space-4); }
+      .toolbar { gap: var(--space-2); }
+      .switch button { padding: 0 var(--space-3); font-size: 14px; }
+      .comparison { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); margin-top: var(--space-6); }
+      .compact-panel { order: -1; }
+      .message { padding: var(--space-4); }
+      .extra-control { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#previews">알림 미리보기로 이동</a>
+  <main>
+    <header>
+      <h1>AI 브리핑 미리보기</h1>
+      <p class="intro">같은 소식 3건을 현재 형식과 짧은 형식으로 비교합니다.</p>
+    </header>
+    <div class="toolbar">
+      <div class="switch" role="group" aria-label="미리보기 형식">
+        <button type="button" data-view="compact" aria-pressed="false" aria-controls="previews">개선안</button>
+        <button type="button" data-view="original" aria-pressed="false" aria-controls="previews">현재 형식</button>
+        <button type="button" data-view="both" aria-pressed="true" aria-controls="previews">나란히 비교</button>
+      </div>
+      <label class="extra-control"><input id="impact-toggle" type="checkbox" checked>개선안에 영향 설명 표시</label>
+    </div>
+    <div id="previews" class="comparison" data-view="both">
+      <section class="panel original-panel" aria-labelledby="original-heading">
+        <div class="panel-heading"><h2 id="original-heading">현재 형식</h2><p>핵심 · 의미 · 관련 대상</p></div>
+        <div class="chat">
+          <div class="chat-title"><div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8M12 2v2M5 9h14v11H5zM2 12h3M19 12h3M8 16h8"/><path d="M8 12h.01M16 12h.01"/></svg></div><div><strong>AI 트렌드 봇</strong><span>알림 형식 미리보기</span></div></div>
+          <div class="message original">
+            <div class="message-header"><strong>☀️ AI 트렌드 브리핑 · 점심 13:30</strong><p>10월 4일 (일) · 3건</p></div>
+            <article class="article">
+              <h3>01. 소비자 AI 시장의 저조한 채택률과 기업 중심의 AI 투자</h3>
+              <p class="category">[정책·산업·자금]</p>
+              <p>핵심: 소비자 대상 AI 제품의 채택률은 2%에 불과하며, 주요 수익은 여전히 기업용 시장에서 발생하고 있습니다.<br>왜 중요한가: 소비자 시장의 낮은 반응과 달리 기업용 AI 솔루션은 실질적인 자본 유입을 주도하며 시장의 중심축으로 자리 잡고 있습니다.<br>관련 대상: AI 스타트업 창업자 및 투자자</p>
+              <p class="sources"><span class="source-label">↳ 원문:</span><span>TechCrunch AI</span></p>
+            </article>
+            <article class="article">
+              <h3>02. 애플, AI 에이전트 데이터 접근 권한 통제 강화</h3>
+              <p class="category">[정책·산업·자금]</p>
+              <p>핵심: 애플은 맥OS의 '전체 디스크 접근' 권한을 요구하는 AI 에이전트의 데이터 오남용을 막기 위해 사용자의 명시적 승인 절차를 강화합니다.<br>왜 중요한가: 자율적인 AI 에이전트가 개인 메시지나 브라우징 기록에 접근할 때 발생할 수 있는 보안 허점을 운영체제 차원에서 선제적으로 차단하기 위함입니다.<br>관련 대상: 맥OS용 AI 에이전트 개발자</p>
+              <p class="sources"><span class="source-label">↳ 원문:</span><span>AI타임스</span><span class="source-separator">·</span><span>TechCrunch AI</span></p>
+            </article>
+            <article class="article">
+              <h3>03. 미 재무장관, AI 규제 요구하는 CEO들 비판</h3>
+              <p class="category">[정책·산업·자금]</p>
+              <p>핵심: 스콧 베센트 미 재무장관은 정부 규제를 요구하는 AI 기업 경영진을 '한니발 렉터'에 비유하며, 자발적 안전 협약 준수와 기업 스스로의 개발 속도 조절을 강조했습니다.<br>왜 중요한가: 정부는 강제적 규제가 혁신을 저해하고 국가 경쟁력을 약화시킨다는 입장을 고수하며 기업의 책임 있는 개발을 촉구하고 있습니다.<br>관련 대상: AI 기업 경영진 및 정책 담당자</p>
+              <p class="sources"><span class="source-label">↳ 원문:</span><span>AI타임스</span></p>
+            </article>
+            <div class="time">13:30</div>
+          </div>
+        </div>
+      </section>
+      <section class="panel compact-panel" aria-labelledby="compact-heading">
+        <div class="panel-heading"><h2 id="compact-heading">개선안</h2><p>새 사실 먼저, 영향은 필요한 곳에</p></div>
+        <div class="chat">
+          <div class="chat-title"><div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8M12 2v2M5 9h14v11H5zM2 12h3M19 12h3M8 16h8"/><path d="M8 12h.01M16 12h.01"/></svg></div><div><strong>AI 트렌드 봇</strong><span>알림 형식 미리보기</span></div></div>
+          <div class="message compact">
+            <div class="message-header"><strong>☀️ AI 브리핑 · 점심</strong><p>10월 4일 (일) · 13:30 · 3건</p></div>
+            <article class="article">
+              <h3><span class="number">01</span> 소비자 AI 채택은 낮고, 수익은 기업용 중심</h3>
+              <p class="fact">소비자용 AI 제품의 채택률은 <b>2%</b>로 제시됐으며, 주요 수익은 여전히 기업용 시장에서 발생합니다.</p>
+              <p class="sources"><span class="source-label">원문:</span><span>TechCrunch AI</span></p>
+            </article>
+            <article class="article">
+              <h3><span class="number">02</span> 애플, AI 에이전트의 데이터 접근 통제 강화</h3>
+              <p class="fact">macOS의 <b>‘전체 디스크 접근’</b> 권한을 요구하는 AI 에이전트에 사용자 승인 절차를 강화합니다.</p>
+              <p class="impact"><b>영향</b> · macOS 에이전트 개발 시 메시지·브라우징 기록에 대한 접근 권한 처리가 중요해집니다.</p>
+              <p class="sources"><span class="source-label">원문:</span><span>AI타임스</span><span class="source-separator">·</span><span>TechCrunch AI</span></p>
+            </article>
+            <article class="article">
+              <h3><span class="number">03</span> 미 재무장관, AI 규제 요구에 반대</h3>
+              <p class="fact">스콧 베센트는 AI 기업의 정부 규제 요구를 비판하고, <b>자발적 안전 협약과 개발 속도 조절</b>을 강조했습니다.</p>
+              <p class="sources"><span class="source-label">원문:</span><span>AI타임스</span></p>
+            </article>
+            <div class="time">13:30</div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer class="notes">
+      <p>제공한 이미지의 3개 기사로 구성했습니다. 출처는 이름만 표시했으며, 원문 링크는 연결하지 않았습니다.</p>
+      <p>Telegram을 닮은 HTML 미리보기입니다. 실제 알림에서는 앱의 글꼴·화면 너비에 따라 줄바꿈이 달라집니다.</p>
+    </footer>
+  </main>
+  <script>
+    const previews = document.querySelector('.comparison');
+    const viewButtons = document.querySelectorAll('[data-view][aria-pressed]');
+    function setView(view) {
+      previews.dataset.view = view;
+      viewButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+    }
+    viewButtons.forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
+    document.querySelector('#impact-toggle').addEventListener('change', event => {
+      document.querySelectorAll('.compact .impact').forEach(impact => { impact.hidden = !event.target.checked; });
+    });
+    if (window.matchMedia('(max-width: 700px)').matches) setView('compact');
+  </script>
+</body>
+</html>

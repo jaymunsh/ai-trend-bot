@@ -26,6 +26,9 @@ class RawItem(BaseModel):
     text: str = Field(min_length=1)
     url: HttpUrl
     published_at: datetime
+    # Missing or implausible feed dates are eligible, but never presented as
+    # confirmed recent publications. The collector reports them separately.
+    published_at_known: bool = True
     priority: int = Field(ge=1, le=100)
     external_id: str | None = None
 

@@ -32,13 +32,14 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        # Backups fire ~50 min after each slot; skip if that slot already delivered.
-        run: uv run ai-trend-bot run --send --limit 30 --min-gap-hours 3
+        # Manual fallback sends immediately; it does not wait for a regular slot.
+        run: uv run ai-trend-bot run --send --limit 50 --min-gap-hours 3
       - name: Commit send log
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/sent.jsonl
+          if [ -d data/archive ]; then git add data/archive; fi
           git diff --staged --quiet || git commit -m "Record digest send $(date -u +%Y-%m-%dT%H:%MZ)"
           git push

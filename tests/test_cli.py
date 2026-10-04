@@ -1,10 +1,13 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
+from unittest.mock import AsyncMock
 
 from pydantic import HttpUrl
 from typer.testing import CliRunner
 
-from ai_trend_bot.cli import CliRunSettings, _report, app, console, sent_log_path
+from ai_trend_bot import cli
+from ai_trend_bot.cli import CliRunSettings, app, console, sent_log_path
 from ai_trend_bot.models import RawItem, SourceKind
 from ai_trend_bot.pipeline import RunResult
 from ai_trend_bot.triage import Dropped
@@ -72,9 +75,20 @@ def test_report_shows_dropped_when_sending() -> None:
 
     # When
     with console.capture() as captured:
-        _report(settings, result)
+        cli._report(settings, result)  # pyright: ignore[reportPrivateUsage]
 
     # Then
     output = captured.get()
     assert "탈락 1건" in output
     assert "How SomeCorp digitizes policies" in output
+
+
+def test_cli_accepts_fifty_items_and_rejects_larger_limits(monkeypatch):
+
+    execute = AsyncMock(return_value=RunResult(items=(), warnings=()))
+    monkeypatch.setattr(cli, "_execute", execute)
+    runner = CliRunner()
+    assert runner.invoke(app, ["run", "--dry-run", "--limit", "50"]).exit_code == 0
+    settings = cast("CliRunSettings", execute.call_args.args[0])
+    assert settings.limit == 50
+    assert runner.invoke(app, ["run", "--dry-run", "--limit", "51"]).exit_code == 2

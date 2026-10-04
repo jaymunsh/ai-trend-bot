@@ -5,1665 +5,763 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="AI 트렌드 봇의 현재 구현, 자동화 흐름, 수집처, 운영 일정과 Threads 보류 상태를 설명하는 프로젝트 개요 문서"
+      content="30개 출처의 AI 소식을 선별해 한국어 Telegram 브리핑으로 전달하는 개인 프로젝트. 수집 방식, Gemini 선별, 운영 구조와 개선 방향을 소개합니다."
     />
-    <meta name="theme-color" content="#F7F6F3" />
-    <link rel="icon" href="data:," />
-    <title>AI 트렌드 봇 · 구현 및 운영 개요</title>
-    <style>
-      :root {
-        --surface-canvas: #f7f6f3;
-        --surface-primary: #fffefc;
-        --surface-secondary: #f1f0ec;
-        --text-primary: #242628;
-        --text-secondary: #656965;
-        --text-tertiary: #5f635e;
-        --border-default: #d9d9d3;
-        --border-subtle: #e9e8e3;
-        --accent-primary: #1459c7;
-        --accent-hover: #0c439a;
-        --accent-soft: #eaf1fd;
-        --status-success: #246b45;
-        --status-success-soft: #e8f3ec;
-        --status-warning: #9b5d12;
-        --status-warning-soft: #fbf0dd;
-        --status-error: #a63a32;
-        --status-error-soft: #f9e9e7;
-        --space-1: 4px;
-        --space-2: 8px;
-        --space-3: 12px;
-        --space-4: 16px;
-        --space-5: 20px;
-        --space-6: 24px;
-        --space-8: 32px;
-        --space-10: 40px;
-        --space-12: 48px;
-        --space-16: 64px;
-        --space-20: 80px;
-        --space-24: 96px;
-        --font-sans:
-          ui-sans-serif, -apple-system, BlinkMacSystemFont,
-          "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-        --font-serif: "Iowan Old Style", "Noto Serif KR", Georgia, serif;
-        --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html {
-        scroll-behavior: smooth;
-        color-scheme: light;
-        background: var(--surface-canvas);
-      }
-      body {
-        margin: 0;
-        color: var(--text-primary);
-        background: var(--surface-canvas);
-        font: 16px/1.7 var(--font-sans);
-        word-break: keep-all;
-        overflow-wrap: anywhere;
-      }
-      a {
-        color: var(--accent-primary);
-        text-underline-offset: 3px;
-      }
-      a:hover {
-        color: var(--accent-hover);
-      }
-      button,
-      a {
-        touch-action: manipulation;
-      }
-      .skip-link {
-        position: fixed;
-        z-index: 10;
-        top: var(--space-3);
-        left: var(--space-3);
-        padding: var(--space-3) var(--space-4);
-        border: 1px solid var(--accent-primary);
-        border-radius: 4px;
-        background: var(--surface-primary);
-        color: var(--accent-primary);
-        font-weight: 700;
-        transform: translateY(-160%);
-      }
-      .skip-link:focus {
-        transform: translateY(0);
-      }
-      .page {
-        display: grid;
-        grid-template-columns: 248px minmax(0, 1fr);
-        width: min(1440px, 100%);
-        min-height: 100dvh;
-        margin: auto;
-        border-inline: 1px solid var(--border-default);
-        background: var(--surface-primary);
-      }
-      .rail {
-        position: sticky;
-        top: 0;
-        display: flex;
-        height: 100dvh;
-        flex-direction: column;
-        padding: var(--space-8) var(--space-6);
-        border-right: 1px solid var(--border-default);
-        background: var(--surface-canvas);
-        overflow: auto;
-      }
-      .brand {
-        padding-bottom: var(--space-8);
-        border-bottom: 1px solid var(--border-default);
-      }
-      .brand strong {
-        display: block;
-        font-size: 1.125rem;
-        letter-spacing: -0.01em;
-      }
-      .brand span {
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-      }
-      .rail-label {
-        margin: var(--space-8) 0 var(--space-2);
-        color: var(--text-tertiary);
-        font-size: 0.6875rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      .toc {
-        display: grid;
-        gap: var(--space-1);
-      }
-      .toc a {
-        display: flex;
-        min-height: 44px;
-        align-items: center;
-        gap: var(--space-3);
-        padding: var(--space-2) var(--space-3);
-        border-left: 2px solid transparent;
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-        text-decoration: none;
-      }
-      .toc a span {
-        min-width: 22px;
-        color: var(--text-tertiary);
-        font: 600 0.75rem/1 var(--font-mono);
-      }
-      .toc a:hover,
-      .toc a[aria-current="true"] {
-        border-color: var(--accent-primary);
-        color: var(--accent-primary);
-        background: var(--accent-soft);
-      }
-      .toc a[aria-current="true"] span {
-        color: var(--accent-primary);
-      }
-      .rail-note {
-        margin-top: auto;
-        padding-top: var(--space-8);
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-      }
-      .rail-note strong {
-        display: block;
-        color: var(--text-primary);
-        font-size: 0.75rem;
-      }
-      .content {
-        min-width: 0;
-      }
-      .hero {
-        position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
-        gap: var(--space-12);
-        padding: var(--space-20) clamp(var(--space-6), 5vw, var(--space-16))
-          var(--space-16);
-        border-bottom: 1px solid var(--border-default);
-      }
-      .hero-copy {
-        min-width: 0;
-      }
-      .overline {
-        margin: 0 0 var(--space-4);
-        color: var(--accent-primary);
-        font-size: 0.6875rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      .hero h1 {
-        max-width: 11ch;
-        margin: 0;
-        font: 700 clamp(2.75rem, 7vw, 5.25rem)/1.02 var(--font-serif);
-        letter-spacing: -0.045em;
-      }
-      .hero-side {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        gap: var(--space-6);
-      }
-      .lede {
-        margin: 0;
-        color: var(--text-secondary);
-        font-size: 1.125rem;
-        line-height: 1.7;
-      }
-      .status-line {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-2);
-      }
-      .badge {
-        display: inline-flex;
-        min-height: 28px;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-1) var(--space-3);
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 700;
-      }
-      .badge::before {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        content: "";
-      }
-      .badge.success {
-        color: var(--status-success);
-        background: var(--status-success-soft);
-      }
-      .badge.success::before {
-        background: var(--status-success);
-      }
-      .badge.warning {
-        color: var(--status-warning);
-        background: var(--status-warning-soft);
-      }
-      .badge.warning::before {
-        background: var(--status-warning);
-      }
-      .badge.neutral {
-        color: var(--text-secondary);
-        background: var(--surface-secondary);
-      }
-      .badge.neutral::before {
-        background: var(--text-tertiary);
-      }
-      .print-button {
-        align-self: flex-start;
-        min-height: 44px;
-        padding: 0 var(--space-4);
-        border: 1px solid var(--border-default);
-        border-radius: 4px;
-        background: var(--surface-primary);
-        color: var(--text-primary);
-        font: 700 0.875rem var(--font-sans);
-        cursor: pointer;
-      }
-      .print-button:hover {
-        border-color: var(--accent-primary);
-        color: var(--accent-primary);
-      }
-      .print-button:active {
-        transform: translateY(1px);
-      }
-      :focus-visible {
-        outline: 3px solid var(--accent-primary);
-        outline-offset: 2px;
-      }
-      .section {
-        padding: var(--space-16) clamp(var(--space-6), 5vw, var(--space-16));
-        border-bottom: 1px solid var(--border-default);
-        scroll-margin-top: var(--space-6);
-      }
-      .section-heading {
-        display: grid;
-        grid-template-columns: 76px minmax(0, 1fr);
-        gap: var(--space-4);
-        margin-bottom: var(--space-10);
-      }
-      .section-index {
-        padding-top: var(--space-2);
-        color: var(--accent-primary);
-        font: 700 0.875rem/1 var(--font-mono);
-      }
-      .section-title h2 {
-        margin: 0;
-        font-size: 2rem;
-        line-height: 1.2;
-        letter-spacing: -0.025em;
-      }
-      .section-title p {
-        max-width: 68ch;
-        margin: var(--space-3) 0 0;
-        color: var(--text-secondary);
-      }
-      .metrics {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      .metric {
-        min-height: 138px;
-        padding: var(--space-5);
-        background: var(--surface-primary);
-      }
-      .metric + .metric {
-        border-left: 1px solid var(--border-default);
-      }
-      .metric-label {
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-        font-weight: 700;
-      }
-      .metric-value {
-        display: block;
-        margin: var(--space-2) 0;
-        font: 700 2rem/1.15 var(--font-serif);
-        font-variant-numeric: tabular-nums;
-      }
-      .metric small {
-        display: block;
-        color: var(--text-tertiary);
-        font-size: 0.75rem;
-      }
-      .fact-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-4);
-        margin-top: var(--space-6);
-      }
-      .fact {
-        padding: var(--space-6);
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        background: var(--surface-primary);
-      }
-      .fact h3 {
-        margin: 0 0 var(--space-3);
-        font-size: 1.125rem;
-        line-height: 1.4;
-      }
-      .fact p {
-        margin: 0;
-        color: var(--text-secondary);
-      }
-      .fact ul {
-        margin: var(--space-3) 0 0;
-        padding-left: 1.25rem;
-        color: var(--text-secondary);
-      }
-      .diagram {
-        margin: 0 0 var(--space-6);
-        padding: var(--space-6);
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        background: var(--surface-primary);
-        overflow: hidden;
-      }
-      .diagram h3 {
-        margin: 0 0 var(--space-5);
-        font-size: 1.125rem;
-      }
-      .diagram .mermaid {
-        min-width: 0;
-      }
-      .diagram-scroll {
-        overflow: auto;
-        border-radius: 4px;
-      }
-      .scroll-hint {
-        display: none;
-        margin: 0 0 var(--space-3);
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-      }
-      .diagram figcaption {
-        margin-top: var(--space-5);
-        padding-top: var(--space-4);
-        border-top: 1px solid var(--border-subtle);
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-      }
-      .diagram-fallback {
-        margin: var(--space-4) 0 0;
-        padding: var(--space-4);
-        border-left: 3px solid var(--accent-primary);
-        background: var(--accent-soft);
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-      }
-      .timeline {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        border-top: 1px solid var(--text-primary);
-      }
-      .timeline li {
-        position: relative;
-        padding: var(--space-6) var(--space-4) 0;
-      }
-      .timeline li::before {
-        position: absolute;
-        top: -7px;
-        left: var(--space-4);
-        width: 11px;
-        height: 11px;
-        border: 2px solid var(--accent-primary);
-        border-radius: 50%;
-        background: var(--surface-primary);
-        content: "";
-      }
-      .timeline time {
-        display: block;
-        color: var(--accent-primary);
-        font: 700 1rem/1.4 var(--font-mono);
-      }
-      .timeline strong {
-        display: block;
-        margin: var(--space-2) 0;
-      }
-      .timeline span {
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-      }
-      .callout {
-        margin-top: var(--space-6);
-        padding: var(--space-5);
-        border-left: 3px solid;
-        background: var(--surface-secondary);
-      }
-      .callout h3 {
-        margin: 0 0 var(--space-2);
-        font-size: 1rem;
-      }
-      .callout p {
-        margin: 0;
-        color: var(--text-secondary);
-      }
-      .callout.info {
-        border-color: var(--accent-primary);
-        background: var(--accent-soft);
-      }
-      .callout.success {
-        border-color: var(--status-success);
-        background: var(--status-success-soft);
-      }
-      .callout.warning {
-        border-color: var(--status-warning);
-        background: var(--status-warning-soft);
-      }
-      .table-wrap {
-        overflow: auto;
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        background: var(--surface-primary);
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 720px;
-      }
-      caption {
-        padding: var(--space-4) var(--space-5);
-        text-align: left;
-        font-weight: 700;
-      }
-      th,
-      td {
-        padding: var(--space-3) var(--space-4);
-        border-top: 1px solid var(--border-subtle);
-        text-align: left;
-        vertical-align: top;
-        font-size: 0.875rem;
-      }
-      th {
-        color: var(--text-secondary);
-        background: var(--surface-secondary);
-        font-size: 0.75rem;
-        letter-spacing: 0.02em;
-      }
-      td code {
-        font: 600 0.8125rem var(--font-mono);
-      }
-      .priority {
-        font-variant-numeric: tabular-nums;
-        font-weight: 700;
-      }
-      .source-list {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-3);
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .source-list li {
-        display: grid;
-        grid-template-columns: 38px minmax(0, 1fr) auto;
-        gap: var(--space-3);
-        align-items: center;
-        padding: var(--space-4);
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-      }
-      .source-number {
-        color: var(--text-tertiary);
-        font: 600 0.75rem var(--font-mono);
-      }
-      .source-name {
-        font-weight: 700;
-      }
-      .source-type {
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-      }
-      .checklist {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-3);
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .checklist li {
-        position: relative;
-        padding: var(--space-4) var(--space-4) var(--space-4) var(--space-10);
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-      }
-      .checklist li::before {
-        position: absolute;
-        left: var(--space-4);
-        top: var(--space-4);
-        display: grid;
-        width: 20px;
-        height: 20px;
-        place-items: center;
-        border-radius: 50%;
-        color: var(--status-success);
-        background: var(--status-success-soft);
-        font-size: 0.75rem;
-        font-weight: 800;
-        content: "✓";
-      }
-      .checklist strong {
-        display: block;
-        font-size: 0.875rem;
-      }
-      .checklist span {
-        display: block;
-        color: var(--text-secondary);
-        font-size: 0.75rem;
-      }
-      .code-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-4);
-      }
-      .code-block {
-        min-width: 0;
-      }
-      .code-block h3 {
-        margin: 0 0 var(--space-3);
-        font-size: 1rem;
-      }
-      .code-block pre {
-        margin: 0;
-        padding: var(--space-5);
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        background: var(--surface-secondary);
-        overflow: auto;
-      }
-      .code-block code {
-        font: 400 0.8125rem/1.7 var(--font-mono);
-        white-space: pre;
-      }
-      .repo-tree {
-        margin: 0;
-        padding: var(--space-5);
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        background: var(--surface-secondary);
-        overflow: auto;
-        font: 400 0.8125rem/1.75 var(--font-mono);
-        white-space: pre;
-      }
-      .risk-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-4);
-      }
-      details {
-        border: 1px solid var(--border-default);
-        border-radius: 8px;
-        background: var(--surface-primary);
-      }
-      summary {
-        min-height: 52px;
-        padding: var(--space-3) var(--space-4);
-        font-weight: 700;
-        cursor: pointer;
-      }
-      details p {
-        margin: 0;
-        padding: 0 var(--space-4) var(--space-4);
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-      }
-      .footer {
-        padding: var(--space-12) clamp(var(--space-6), 5vw, var(--space-16));
-        background: var(--surface-canvas);
-      }
-      .footer-inner {
-        display: flex;
-        justify-content: space-between;
-        gap: var(--space-6);
-        align-items: flex-end;
-      }
-      .footer p {
-        margin: 0;
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-      }
-      .footer a {
-        font-weight: 700;
-        overflow-wrap: anywhere;
-      }
-      @media (max-width: 1024px) {
-        .page {
-          display: block;
-          border: 0;
-        }
-        .rail {
-          position: sticky;
-          z-index: 5;
-          top: 0;
-          height: auto;
-          padding: var(--space-3) var(--space-4);
-          border-right: 0;
-          border-bottom: 1px solid var(--border-default);
-          overflow: hidden;
-        }
-        .brand,
-        .rail-label,
-        .rail-note {
-          display: none;
-        }
-        .toc {
-          display: flex;
-          gap: var(--space-1);
-          overflow: auto;
-          scrollbar-width: thin;
-        }
-        .toc a {
-          flex: 0 0 auto;
-          border-left: 0;
-          border-bottom: 2px solid transparent;
-        }
-        .hero {
-          padding-top: var(--space-16);
-        }
-      }
-      @media (max-width: 768px) {
-        .hero {
-          grid-template-columns: 1fr;
-          gap: var(--space-8);
-        }
-        .hero h1 {
-          max-width: 13ch;
-        }
-        .metrics {
-          grid-template-columns: repeat(2, 1fr);
-        }
-        .metric:nth-child(3) {
-          border-left: 0;
-          border-top: 1px solid var(--border-default);
-        }
-        .metric:nth-child(4) {
-          border-top: 1px solid var(--border-default);
-        }
-        .fact-grid,
-        .source-list,
-        .checklist,
-        .code-grid,
-        .risk-grid {
-          grid-template-columns: 1fr;
-        }
-        .section-heading {
-          grid-template-columns: 48px minmax(0, 1fr);
-        }
-        .footer-inner {
-          display: grid;
-        }
-      }
-      @media (max-width: 640px) {
-        body {
-          font-size: 16px;
-        }
-        .hero,
-        .section,
-        .footer {
-          padding-inline: var(--space-5);
-        }
-        .hero {
-          padding-top: var(--space-12);
-          padding-bottom: var(--space-12);
-        }
-        .hero h1 {
-          font-size: clamp(2.75rem, 15vw, 4rem);
-        }
-        .section {
-          padding-top: var(--space-12);
-          padding-bottom: var(--space-12);
-        }
-        .section-heading {
-          display: block;
-        }
-        .section-index {
-          margin-bottom: var(--space-3);
-        }
-        .section-title h2 {
-          font-size: 1.5rem;
-        }
-        .metrics {
-          grid-template-columns: 1fr;
-        }
-        .metric {
-          min-height: 0;
-        }
-        .metric + .metric,
-        .metric:nth-child(3),
-        .metric:nth-child(4) {
-          border-left: 0;
-          border-top: 1px solid var(--border-default);
-        }
-        .timeline {
-          grid-template-columns: 1fr;
-          border-top: 0;
-          border-left: 1px solid var(--text-primary);
-        }
-        .timeline li {
-          padding: 0 0 var(--space-6) var(--space-6);
-        }
-        .timeline li::before {
-          top: 6px;
-          left: -7px;
-        }
-        .source-list li {
-          grid-template-columns: 30px minmax(0, 1fr);
-        }
-        .source-type {
-          grid-column: 2;
-        }
-        .diagram {
-          padding: var(--space-4);
-        }
-        .diagram-wide .scroll-hint {
-          display: block;
-        }
-        .diagram-wide .mermaid > svg {
-          min-width: 760px;
-          max-width: none !important;
-        }
-        .footer {
-          padding-bottom: var(--space-16);
-        }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        html {
-          scroll-behavior: auto;
-        }
-        * {
-          transition: none !important;
-        }
-      }
-      .space-top-4 {
-        margin-top: var(--space-4);
-      }
-      .space-top-6 {
-        margin-top: var(--space-6);
-      }
-      .space-top-8 {
-        margin-top: var(--space-8);
-        margin-bottom: var(--space-3);
-      }
-      @media print {
-        .rail,
-        .print-button,
-        .skip-link {
-          display: none;
-        }
-        .page {
-          display: block;
-          width: 100%;
-          border: 0;
-        }
-        .hero,
-        .section,
-        .footer {
-          padding: 28px 32px;
-        }
-        .section {
-          break-inside: auto;
-        }
-        .diagram,
-        .table-wrap,
-        .fact,
-        .callout {
-          break-inside: avoid;
-        }
-        details > :not(summary) {
-          display: block !important;
-        }
-        a {
-          color: var(--text-primary);
-          text-decoration: none;
-        }
-        .mermaid {
-          max-height: none;
-        }
-        .footer {
-          border-top: 1px solid var(--border-default);
-        }
-      }
-    </style>
+    <meta name="theme-color" content="#f4f2eb" />
+    <title>AI Trend Bot — 흩어진 AI 소식, 하나의 브리핑</title>
+    <link
+      rel="preload"
+      href="assets/PretendardVariable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="assets/overview.css" />
+    <script src="assets/overview.js" defer></script>
   </head>
   <body>
-    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
-    <div class="page">
-      <aside class="rail" aria-label="문서 목차">
-        <div class="brand">
-          <strong>AI 트렌드 봇</strong><span>구현 및 운영 개요 · 2026-08 개편 반영</span>
-        </div>
-        <p class="rail-label">Contents</p>
-        <nav class="toc">
-          <a href="#overview" aria-current="true"><span>01</span>현재 상태</a>
-          <a href="#architecture"><span>02</span>처리 구조</a>
-          <a href="#schedule"><span>03</span>운영 일정</a>
-          <a href="#sources"><span>04</span>정보 출처</a>
-          <a href="#quality"><span>05</span>선별·출력</a>
-          <a href="#security"><span>06</span>보안·배포</a>
-          <a href="#threads"><span>07</span>Threads</a>
-          <a href="#operation"><span>08</span>운영 방법</a>
-          <a href="#risks"><span>09</span>제약·다음 단계</a>
+    <a class="skip-link" href="#main">본문으로 이동</a>
+    <header class="site-header">
+      <div class="header-inner wrap">
+        <a class="brand" href="#main" aria-label="AI Trend Bot 처음으로"
+          ><img
+            class="brand-avatar"
+            src="assets/ai-news-robot.png"
+            width="40"
+            height="40"
+            alt=""
+            aria-hidden="true"
+          />
+          <span>AI TREND BOT</span></a
+        >
+        <nav aria-label="페이지 탐색">
+          <a href="#architecture">작동 원리</a><a href="#sources">출처</a
+          ><a href="#operation">운영</a><a href="#next">개선 내용</a>
         </nav>
-        <div class="rail-note">
-          <strong>기준 시각</strong>Asia/Seoul · 저장소 구현 기준
-        </div>
-      </aside>
-
-      <main id="main" class="content">
-        <header class="hero">
-          <div class="hero-copy">
-            <p class="overline">Project operating brief</p>
-            <h1>AI 정보를 골라, 한국어로 전달합니다.</h1>
+        <a class="repo-link" href="https://github.com/jaymunsh/ai-trend-bot"
+          >GitHub
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 18 18 6M6 6h12v12" /></svg
+        ></a>
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <h1 id="hero-title">
+            흩어진 AI 소식,<br /><span>하나의 브리핑.</span>
+          </h1>
+          <p class="hero-description">
+            여러 출처의 소식을 모으고, 새로운 사실을 고릅니다. 기사 본문을
+            한국어로 요약해 하루 세 번 Telegram으로 전합니다.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#architecture"
+              >작동 원리 살펴보기
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" /></svg
+            ></a>
           </div>
-          <div class="hero-side">
-            <p class="lede">
-              27개 출처에서 하루 300건 남짓의 후보를 모아, 편집 기준으로 걸러낸
-              소수만 원문을 읽고 한국어로 요약해 하루 세 번 전달하는 개인용
-              자동화입니다.
+          <div class="hero-footnote">
+            <span class="small-rule" aria-hidden="true"></span>
+            <p>
+              현재는 개인용으로 운영하는 프로젝트입니다.<br />이 페이지는 작동
+              원리와 개선 과정을 소개합니다.
             </p>
-            <div class="status-line">
-              <span class="badge success">운영 중</span
-              ><span class="badge neutral">27개 출처</span
-              ><span class="badge neutral">GitHub Actions</span>
+          </div>
+        </div>
+        <figure class="hero-art">
+          <img
+            src="assets/ai-news-robot.png"
+            width="1254"
+            height="1254"
+            fetchpriority="high"
+            decoding="async"
+            alt="AI NEWS 신문을 들고 손을 흔드는 AI Trend Bot의 로봇"
+          />
+        </figure>
+      </section>
+
+      <section class="principles wrap" aria-labelledby="principles-title">
+        <h2 id="principles-title">
+          더 많이 모으는 것보다,<br />읽을 이유가 있는 소식을.
+        </h2>
+        <div class="principle-copy">
+          <p>
+            새 모델, 도구의 중요한 변화, 구체적인 연구 결과, 산업과 정책의
+            움직임을 찾습니다. 제목을 바꿔 쓰는 요약이나 같은 사건의 반복 보도를
+            줄이는 것이 목표입니다.
+          </p>
+          <p>
+            발송 건수를 채우지는 않습니다. 기준을 통과한 만큼 보내고, 보낼
+            소식이 없으면 조용히 넘어갑니다.
+          </p>
+        </div>
+      </section>
+
+      <section
+        id="architecture"
+        class="section wrap"
+        aria-labelledby="architecture-title"
+      >
+        <div class="section-heading">
+          <div>
+            <h2 id="architecture-title">소식이 브리핑이 되는 과정</h2>
+            <p>다섯 단계를 눌러 각 단계의 역할을 살펴보세요.</p>
+          </div>
+          <span class="section-meta">현재 구현 기준</span>
+        </div>
+        <div class="pipeline" role="group" aria-label="처리 단계 선택">
+          <button
+            type="button"
+            class="pipeline-step"
+            data-step="0"
+            aria-pressed="true"
+            aria-controls="stage-detail"
+          >
+            <span class="step-number">01</span><strong>수집</strong
+            ><span>RSS · 공개 API</span>
+          </button>
+          <button
+            type="button"
+            class="pipeline-step"
+            data-step="1"
+            aria-pressed="false"
+            aria-controls="stage-detail"
+          >
+            <span class="step-number">02</span><strong>선별</strong
+            ><span>Gemini · 편집 기준</span>
+          </button>
+          <button
+            type="button"
+            class="pipeline-step"
+            data-step="2"
+            aria-pressed="false"
+            aria-controls="stage-detail"
+          >
+            <span class="step-number">03</span><strong>본문 추출</strong
+            ><span>기사 원문 확보</span>
+          </button>
+          <button
+            type="button"
+            class="pipeline-step"
+            data-step="3"
+            aria-pressed="false"
+            aria-controls="stage-detail"
+          >
+            <span class="step-number">04</span><strong>한국어 요약</strong
+            ><span>사실 · 의미 · 대상</span>
+          </button>
+          <button
+            type="button"
+            class="pipeline-step"
+            data-step="4"
+            aria-pressed="false"
+            aria-controls="stage-detail"
+          >
+            <span class="step-number">05</span><strong>전달</strong
+            ><span>Telegram · 발송 기록</span>
+          </button>
+        </div>
+        <div
+          id="stage-detail"
+          class="stage-detail"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div class="stage-copy">
+            <h3>여러 출처를 하나의 후보 목록으로.</h3>
+            <p>
+              28개 RSS·Atom 피드와 Hacker News, Hugging Face API를 병렬로
+              조회합니다. 최근 48시간의 미발송 기사를 최신순으로 추리고,
+              URL 중복 제거 후 출처별 상한을 적용합니다.
+            </p>
+          </div>
+          <dl class="stage-facts">
+            <div>
+              <dt>입력</dt>
+              <dd>30개 출처</dd>
             </div>
-            <button class="print-button" type="button" data-print>
-              인쇄 또는 PDF 저장
+            <div>
+              <dt>출력</dt>
+              <dd>최근·미발송 후보 목록</dd>
+            </div>
+            <div>
+              <dt>소스별 상한 합계</dt>
+              <dd>최대 435건 · 기간·중복 필터 적용 후</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="architecture-notes">
+          <p>
+            <strong>원문은 선별한 뒤에.</strong> 통과한 소수만 본문을 가져와
+            불필요한 요청을 줄입니다.
+          </p>
+          <p>
+            <strong>기록은 전달한 뒤에.</strong> 메시지별 전송 성공을 확인하고
+            발송 기록을 남깁니다.
+          </p>
+        </div>
+        <details class="technical-details">
+          <summary>
+            구현 모듈과 데이터 흐름 보기 <span aria-hidden="true">+</span>
+          </summary>
+          <div class="technical-content">
+            <p>
+              <code>pipeline.py</code>가 전체 흐름을 조립합니다. 네트워크·모델
+              호출과 선별 규칙, 저장·표시 역할을 모듈별로 나눴습니다.
+            </p>
+            <ul class="module-list">
+              <li><code>feeds.py</code><span>RSS·HN·HF 수집과 정규화</span></li>
+              <li>
+                <code>triage.py / gemini.py</code
+                ><span>분류·사건 병합·순위와 LLM 호출</span>
+              </li>
+              <li><code>enrich.py</code><span>trafilatura 본문 추출</span></li>
+              <li>
+                <code>telegram.py / store.py</code
+                ><span>HTML 분할·전송과 JSONL 기록</span>
+              </li>
+            </ul>
+            <p class="technical-flow">
+              후보 → 100건 단위 1차 선별 → 여러 배치라면 생존자 전역 선별 → 본문
+              추출 → 요약 → 메시지별 전송 → 기록
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <section
+        id="sources"
+        class="section sources-section wrap"
+        aria-labelledby="sources-title"
+      >
+        <div class="section-heading">
+          <div>
+            <h2 id="sources-title">어디에서 가져오나요?</h2>
+            <p>뉴스 매체 9개를 포함해 총 30개 출처를 보고 있습니다.</p>
+          </div>
+          <span class="section-meta">config/sources.toml 기준</span>
+        </div>
+        <div class="source-toolbar">
+          <div class="source-filters" role="group" aria-label="출처 종류">
+            <button
+              type="button"
+              data-source-filter="all"
+              aria-pressed="true"
+              aria-controls="source-list"
+            >
+              전체 <span>30</span></button
+            ><button
+              type="button"
+              data-source-filter="media"
+              aria-pressed="false"
+              aria-controls="source-list"
+            >
+              뉴스 매체 <span>9</span></button
+            ><button
+              type="button"
+              data-source-filter="official"
+              aria-pressed="false"
+              aria-controls="source-list"
+            >
+              공식 <span>9</span></button
+            ><button
+              type="button"
+              data-source-filter="research"
+              aria-pressed="false"
+              aria-controls="source-list"
+            >
+              연구 <span>5</span></button
+            ><button
+              type="button"
+              data-source-filter="other"
+              aria-pressed="false"
+              aria-controls="source-list"
+            >
+              큐레이터·커뮤니티 <span>7</span>
             </button>
           </div>
-        </header>
+          <p id="source-count" aria-live="polite">전체 30개 출처</p>
+        </div>
+        <div class="source-list-head" aria-hidden="true">
+          <span>출처</span><span>수집 방식</span><span>후보 상한 / 회차</span>
+        </div>
+        <ul id="source-list" class="source-list">
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>OpenAI News</strong><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>Google DeepMind</strong
+              ><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>Google AI</strong><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>Google Developers</strong
+              ><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>Mistral AI</strong><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>Apple Machine Learning</strong
+              ><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>NVIDIA Generative AI</strong
+              ><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>AWS Machine Learning</strong
+              ><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="official">
+            <div class="source-name">
+              <strong>GitHub AI &amp; ML</strong
+              ><span class="source-kind">공식</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>TechCrunch AI</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>VentureBeat AI</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>The Verge AI</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>Ars Technica</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>MIT Technology Review AI</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name">
+              <strong>Simon Willison</strong
+              ><span class="source-kind">큐레이터·커뮤니티</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name">
+              <strong>Import AI</strong
+              ><span class="source-kind">큐레이터·커뮤니티</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">5건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name">
+              <strong>Sebastian Raschka</strong
+              ><span class="source-kind">큐레이터·커뮤니티</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">5건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name">
+              <strong>Hacker News (AI)</strong
+              ><span class="source-kind">큐레이터·커뮤니티</span>
+            </div>
+            <span class="source-method">Algolia API</span
+            ><span class="source-cap">20건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name">
+              <strong>Hugging Face 트렌딩</strong
+              ><span class="source-kind">큐레이터·커뮤니티</span>
+            </div>
+            <span class="source-method">Models API</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="research">
+            <div class="source-name">
+              <strong>Hugging Face Blog</strong
+              ><span class="source-kind">연구</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="research">
+            <div class="source-name">
+              <strong>arXiv cs.AI</strong><span class="source-kind">연구</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">20건</span>
+          </li>
+          <li class="source-row" data-group="research">
+            <div class="source-name">
+              <strong>arXiv cs.CL</strong><span class="source-kind">연구</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">20건</span>
+          </li>
+          <li class="source-row" data-group="research">
+            <div class="source-name">
+              <strong>arXiv cs.LG</strong><span class="source-kind">연구</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">20건</span>
+          </li>
+          <li class="source-row" data-group="research">
+            <div class="source-name">
+              <strong>Berkeley AI Research</strong
+              ><span class="source-kind">연구</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">5건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>AI타임스</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">20건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name">
+              <strong>전자신문</strong
+              ><span class="source-kind">뉴스 매체</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">15건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name">
+              <strong>Threads @choi.openai</strong
+              ><span class="source-kind">큐레이터·커뮤니티</span>
+            </div>
+            <span class="source-method">RSS / Atom</span
+            ><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="other">
+            <div class="source-name"><strong>GeekNews</strong><span class="source-kind">큐레이터·커뮤니티</span></div>
+            <span class="source-method">RSS / Atom</span><span class="source-cap">50건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name"><strong>The Decoder</strong><span class="source-kind">뉴스 매체</span></div>
+            <span class="source-method">RSS / Atom</span><span class="source-cap">10건</span>
+          </li>
+          <li class="source-row" data-group="media">
+            <div class="source-name"><strong>The Guardian AI</strong><span class="source-kind">뉴스 매체</span></div>
+            <span class="source-method">RSS / Atom</span><span class="source-cap">15건</span>
+          </li>
+        </ul>
+        <p class="source-note">
+          소스별 상한은 선별에 넘기는 후보 수입니다. 합계 435건은 최대치이며
+          실제 신규 기사 수나 발송량을 뜻하지 않습니다. 게시일이 없거나 잘못된 글은
+          경고를 남기고 날짜가 확인된 글 뒤에 후보로 넣습니다. 출처 실패 시 해당 소스를 건너뜁니다.
+        </p>
+      </section>
 
-        <section id="overview" class="section" aria-labelledby="overview-title">
-          <div class="section-heading">
-            <span class="section-index">01</span>
-            <div class="section-title">
-              <h2 id="overview-title">현재 구현 상태</h2>
-              <p>
-                수집부터 선별, 원문 요약, 텔레그램 발송, 기록 커밋까지 한
-                사이클이 자동으로 돕니다.
-              </p>
-            </div>
-          </div>
-          <div class="metrics">
-            <article class="metric">
-              <span class="metric-label">활성 수집처</span
-              ><strong class="metric-value">27개</strong
-              ><small>공식 9 · 미디어 5 · 커뮤니티 6 · 연구 5 · 국내 2</small>
-            </article>
-            <article class="metric">
-              <span class="metric-label">하루 실행</span
-              ><strong class="metric-value">3회</strong
-              ><small>07:23 · 13:23 · 19:23 KST · 백업 3회</small>
-            </article>
-            <article class="metric">
-              <span class="metric-label">회차 발송량</span
-              ><strong class="metric-value">가변</strong
-              ><small>기준 통과분만 · 실측 7~14건</small>
-            </article>
-            <article class="metric">
-              <span class="metric-label">선별 라운드</span
-              ><strong class="metric-value">2회</strong
-              ><small>배치 심사 → 전역 선별</small>
-            </article>
-          </div>
-          <div class="fact-grid">
-            <article class="fact">
-              <h3>완성된 기능</h3>
-              <ul>
-                <li>27개 출처 수집 (RSS · Hacker News · Hugging Face)</li>
-                <li>분류·사건 병합·후속 판정·순위로 선별</li>
-                <li>통과분만 원문 본문을 받아 심층 요약</li>
-                <li>텔레그램 발송과 메시지 분할</li>
-                <li>발송 기록을 저장소에 자동 커밋</li>
-              </ul>
-            </article>
-            <article class="fact">
-              <h3>무엇이 달라졌나</h3>
-              <p>
-                예전에는 안 본 항목을 출처별로 번갈아 골라 15칸을 채웠습니다.
-                좋은 소식이 3건뿐인 날에도 12건을 끌어왔다는 뜻입니다. 지금은
-                편집 기준을 통과한 것만 보내고, 통과분이 없으면 보내지 않습니다.
-              </p>
-            </article>
-          </div>
-        </section>
-
-        <section
-          id="architecture"
-          class="section"
-          aria-labelledby="architecture-title"
-        >
-          <div class="section-heading">
-            <span class="section-index">02</span>
-            <div class="section-title">
-              <h2 id="architecture-title">처리 구조</h2>
-              <p>
-                네 단계가 각자의 입출력만 책임집니다. 한 출처가 실패해도 경고만
-                남기고 나머지는 계속 처리합니다.
-              </p>
-            </div>
-          </div>
-          <figure class="diagram diagram-wide">
-            <h3>전체 아키텍처</h3>
-            <p class="scroll-hint">다이어그램을 좌우로 이동해 전체 내용을 확인하세요.</p>
-            <section
-              class="diagram-scroll"
-              aria-label="전체 아키텍처 다이어그램"
-              tabindex="0"
-            >
-              <pre class="mermaid">
-flowchart LR
-  subgraph Collect[① 수집]
-    RSS[24개 RSS 피드]
-    HN[Hacker News API]
-    HF[Hugging Face API]
-  end
-  subgraph Triage[② 선별]
-    SEEN[발송 기록 대조\nsent.jsonl]
-    R1[1차 배치 심사\n100건씩]
-    R2[2차 전역 선별\n중복 병합·순위]
-  end
-  subgraph Enrich[③ 심화]
-    BODY[원문 본문 추출\ntrafilatura]
-    AI[Gemini 심층 요약]
-  end
-  subgraph Deliver[④ 전달]
-    MSG[3,800자 이하 분할]
-    TG[Telegram Bot]
-    LOG[기록 커밋]
-  end
-  RSS --> SEEN
-  HN --> SEEN
-  HF --> SEEN
-  SEEN -->|후보 300건대| R1 --> R2
-  R2 -->|통과분만| BODY --> AI
-  AI --> MSG --> TG --> LOG
-  LOG -. 다음 회차 후속 판정 .-> R1</pre>
-            </section>
-            <p class="diagram-fallback">
-              텍스트 요약: 27개 출처에서 후보를 모아 이미 보낸 것을 걸러낸 뒤,
-              100건씩 배치로 1차 심사하고 생존자를 다시 모아 2차로 선별합니다.
-              통과한 소수만 원문 본문을 받아 요약하고, 발송 후 기록을 저장소에
-              커밋합니다.
-            </p>
-            <figcaption>
-              원칙은 <strong>싸게 넓게 거르고, 비싸게 좁게 판다</strong>입니다.
-              본문 fetch와 심층 요약은 선별을 통과한 소수에게만 씁니다.
-            </figcaption>
-          </figure>
-          <figure class="diagram diagram-wide">
-            <h3>한 번의 실행이 진행되는 순서</h3>
-            <p class="scroll-hint">다이어그램을 좌우로 이동해 전체 내용을 확인하세요.</p>
-            <section
-              class="diagram-scroll"
-              aria-label="한 번의 실행 순서 다이어그램"
-              tabindex="0"
-            >
-              <pre class="mermaid">
-sequenceDiagram
-  participant GA as GitHub Actions
-  participant SRC as 27개 출처
-  participant LOG as sent.jsonl
-  participant GM as Gemini
-  participant WEB as 기사 원문
-  participant TG as Telegram
-  GA->>SRC: 병렬 요청
-  SRC-->>GA: 후보 300건대
-  GA->>LOG: 이미 보낸 URL·최근 사건 확인
-  LOG-->>GA: 미발송 후보 + 최근 2주 사건 목록
-  GA->>GM: 1차 심사 (100건씩 배치)
-  GM-->>GA: 분류·통과여부·사유·사건 요지
-  GA->>GM: 2차 선별 (생존자 전체)
-  GM-->>GA: 중복 병합·최종 순위
-  GA->>WEB: 통과분 원문 요청
-  WEB-->>GA: 본문 (실패 시 티저로 폴백)
-  GA->>GM: 심층 요약
-  GM-->>GA: 핵심·중요성·관련 대상
-  GA->>TG: 메시지 발송
-  TG-->>GA: 메시지별 완료
-  GA->>LOG: 도착한 만큼만 기록 후 커밋</pre>
-            </section>
-            <p class="diagram-fallback">
-              텍스트 요약: 후보를 모아 두 번에 걸쳐 선별하고, 통과분의 원문을
-              받아 요약해 발송합니다. 기록은 메시지가 실제로 도착한 뒤에만
-              남깁니다.
-            </p>
-            <figcaption>
-              시험 실행(<code>--dry-run</code>)은 발송도 기록도 하지 않아 운영
-              데이터를 건드리지 않습니다.
-            </figcaption>
-          </figure>
-        </section>
-
-        <section id="schedule" class="section" aria-labelledby="schedule-title">
-          <div class="section-heading">
-            <span class="section-index">03</span>
-            <div class="section-title">
-              <h2 id="schedule-title">운영 일정</h2>
-              <p>
-                한국 시간 기준 하루 세 번 실행하고, 회차마다 약 50분 뒤 백업 실행이
-                한 번 더 걸립니다.
-              </p>
-            </div>
-          </div>
-          <ol class="timeline">
-            <li>
-              <time datetime="07:23">07:23</time
-              ><strong>아침 브리핑 🌅</strong
-              ><span
-                >밤사이 올라온 해외 공식 발표와 연구를 반영합니다.</span
-              >
-            </li>
-            <li>
-              <time datetime="13:23">13:23</time
-              ><strong>점심 브리핑 ☀️</strong
-              ><span>오전에 추가된 국내외 소식을 보충합니다.</span>
-            </li>
-            <li>
-              <time datetime="19:23">19:23</time
-              ><strong>저녁 브리핑 🌙</strong
-              ><span>당일 마지막 업데이트를 전달합니다.</span>
-            </li>
-          </ol>
-          <div class="callout info" role="note">
-            <h3>예약 실행은 보장되지 않습니다</h3>
-            <p>
-              GitHub Actions의 <code>schedule</code>은 best-effort 큐입니다. 부하가
-              높으면 지연되고, 지연이 다음 슬롯까지 밀리면 아예 버려집니다. 30~150분
-              지연이 흔하고 2026-08-04 13:23 회차는 트리거 자체가 걸리지 않았습니다.
-              그래서 회차마다 약 50분 뒤 백업 cron을 하나씩 더 둡니다. 백업은
-              최근 3시간 안에 발송한 기록이 있으면 건너뜁니다. 한 회차를
-              통째로 놓쳐도 중복 판정이 URL 기준이라 다음 회차가 그대로 후보로
-              잡습니다. 건수 상한(기본 30, 최대 40)은 목표치가 아니라 폭주
-              방지선입니다.
-            </p>
-          </div>
-        </section>
-
-        <section id="sources" class="section" aria-labelledby="sources-title">
-          <div class="section-heading">
-            <span class="section-index">04</span>
-            <div class="section-title">
-              <h2 id="sources-title">정보 출처</h2>
-              <p>
-                벤더 공식 발표만으로는 경쟁사 평가·사고·규제가 잡히지 않고,
-                미디어만으로는 새 오픈웨이트 모델이 늦습니다. 계층을 섞습니다.
-              </p>
-            </div>
-          </div>
-          <ul class="source-list">
-            <li>
-              <span class="source-number">01</span
-              ><span class="source-name">OpenAI · Google DeepMind · Google AI · Google Developers</span
-              ><span class="source-type">공식 · 80점</span>
-            </li>
-            <li>
-              <span class="source-number">02</span
-              ><span class="source-name">Mistral AI · Apple ML · NVIDIA · AWS ML · GitHub AI &amp; ML</span
-              ><span class="source-type">공식 · 80점</span>
-            </li>
-            <li>
-              <span class="source-number">03</span
-              ><span class="source-name">TechCrunch AI · VentureBeat AI · The Verge AI · Ars Technica · MIT Tech Review</span
-              ><span class="source-type">미디어 · 20점</span>
-            </li>
-            <li>
-              <span class="source-number">04</span
-              ><span class="source-name">Simon Willison · Import AI · Sebastian Raschka</span
-              ><span class="source-type">큐레이터 · 20점</span>
-            </li>
-            <li>
-              <span class="source-number">05</span
-              ><span class="source-name">Hacker News (150점 이상) · Hugging Face 트렌딩 모델</span
-              ><span class="source-type">커뮤니티 · 20점</span>
-            </li>
-            <li>
-              <span class="source-number">06</span
-              ><span class="source-name">arXiv cs.AI · cs.CL · cs.LG · Berkeley AI Research · Hugging Face Blog</span
-              ><span class="source-type">연구 · 30점</span>
-            </li>
-            <li>
-              <span class="source-number">07</span
-              ><span class="source-name">AI타임스 · 전자신문</span
-              ><span class="source-type">국내 · 20점</span>
-            </li>
-            <li>
-              <span class="source-number">08</span
-              ><span class="source-name">Threads @choi.openai (RSSHub 경유)</span
-              ><span class="source-type">커뮤니티 · 20점</span>
-            </li>
-          </ul>
-          <section
-            class="table-wrap space-top-6"
-            aria-label="수집 방식 표"
-            tabindex="0"
-          >
-            <table>
-              <caption>
-                수집 방식과 항목 상한
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">방식</th>
-                  <th scope="col">대상</th>
-                  <th scope="col">항목 상한</th>
-                  <th scope="col">설명</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>rss</code></td>
-                  <td>25개 출처</td>
-                  <td>5~20건</td>
-                  <td>RSS·Atom 피드. RSSHub 경유 Threads도 여기에 해당</td>
-                </tr>
-                <tr>
-                  <td><code>hn</code></td>
-                  <td>Hacker News</td>
-                  <td>20건</td>
-                  <td>Algolia API. 150점 이상 AI 관련 글만</td>
-                </tr>
-                <tr>
-                  <td><code>hf</code></td>
-                  <td>Hugging Face</td>
-                  <td>15건</td>
-                  <td>트렌딩 모델 API. 새 오픈웨이트 공개를 포착</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-          <div class="callout info" role="note">
-            <h3>출처별 상한이 필요한 이유</h3>
-            <p>
-              arXiv cs.LG는 한 번에 200건 넘게 반환합니다. 상한이 없으면 한
-              출처가 후보 풀을 독점합니다. Anthropic과 Meta AI는 RSS를 제공하지
-              않아 빠져 있고, 두 회사 소식은 테크 미디어 경유로만 들어옵니다.
-            </p>
-          </div>
-        </section>
-
-        <section id="quality" class="section" aria-labelledby="quality-title">
-          <div class="section-heading">
-            <span class="section-index">05</span>
-            <div class="section-title">
-              <h2 id="quality-title">선별과 출력 품질</h2>
-              <p>
-                점수에 임계값을 걸지 않습니다. 모델의 절대 점수는 좁은 구간에
-                몰려서 어디를 자르든 자의적이 되기 때문입니다. 대신 종류를
-                매기고, 순위는 후보끼리 비교해 정합니다.
-              </p>
-            </div>
-          </div>
-          <section
-            class="table-wrap"
-            aria-label="분류 표"
-            tabindex="0"
-          >
-            <table>
-              <caption>
-                항목 분류와 처리
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">분류</th>
-                  <th scope="col">처리</th>
-                  <th scope="col">예시</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>모델·제품 출시</td>
-                  <td>통과 후보</td>
-                  <td>새 모델 공개, 가격 변경, 사양 변화</td>
-                </tr>
-                <tr>
-                  <td>연구 결과</td>
-                  <td>통과 후보</td>
-                  <td>통념을 뒤집거나 실무 판단을 바꾸는 결과</td>
-                </tr>
-                <tr>
-                  <td>정책·산업·자금</td>
-                  <td>통과 후보</td>
-                  <td>규제, 소송, 대형 투자, 인수</td>
-                </tr>
-                <tr>
-                  <td>도구·오픈소스</td>
-                  <td>통과 후보</td>
-                  <td>새 라이브러리, 오픈웨이트 공개</td>
-                </tr>
-                <tr>
-                  <td>튜토리얼·사용법</td>
-                  <td>코드에서 제외</td>
-                  <td>&ldquo;X로 Y 만들기&rdquo; 형태의 하우투</td>
-                </tr>
-                <tr>
-                  <td>홍보·사례소개</td>
-                  <td>코드에서 제외</td>
-                  <td>고객 사례, 도입 후기, 파트너십</td>
-                </tr>
-                <tr>
-                  <td>기타</td>
-                  <td>코드에서 제외</td>
-                  <td>채용, 행사, 의견 글</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-          <figure class="diagram space-top-6">
-            <h3>항목 생명주기</h3>
-            <section
-              class="diagram-scroll"
-              aria-label="항목 생명주기 다이어그램"
-              tabindex="0"
-            >
-              <pre class="mermaid">
-stateDiagram-v2
-  [*] --> 수집후보
-  수집후보 --> 제외: 이미 발송한 URL
-  수집후보 --> 1차심사: 새 항목
-  1차심사 --> 제외: 분류 탈락·기준 미달·후속 보도
-  1차심사 --> 2차선별: 통과
-  2차선별 --> 제외: 중복 병합·상대적으로 약함
-  2차선별 --> 본문추출: 최종 선정
-  본문추출 --> 요약: 원문 확보 또는 티저 폴백
-  요약 --> 발송
-  발송 --> 기록: 메시지 도착 확인
-  기록 --> [*]
-  제외 --> [*]</pre>
-            </section>
-            <p class="diagram-fallback">
-              텍스트 요약: 이미 보낸 URL을 뺀 뒤 1차에서 분류와 기준으로 거르고,
-              2차에서 중복을 병합하며 최종 선정합니다. 선정된 것만 원문을 받아
-              요약하고, 발송이 확인된 뒤에 기록합니다.
-            </p>
-            <figcaption>
-              탈락 항목은 사유와 함께 남습니다.
-              <code>--dry-run</code>에서 무엇이 왜 걸러졌는지 확인할 수 있어야
-              기준을 고칠 수 있기 때문입니다.
-            </figcaption>
-          </figure>
-          <div class="callout info" role="note">
-            <h3>왜 두 번 심사하나</h3>
-            <p>
-              무료 티어 Gemini는 후보 300건대를 한 요청으로 받으면 503을
-              반환합니다. 그래서 1차는 100건씩 나눠 돕니다. 다만 배치만 나누면
-              같은 사건을 다룬 두 매체가 서로 다른 배치에 떨어져 둘 다
-              살아남습니다. 2차는 생존자를 한자리에 놓고 중복을 병합하며,
-              <strong>재심사가 아니라 &ldquo;오늘 실을 것을 고르는&rdquo;
-              선별</strong>로 질문을 바꿉니다. 같은 질문을 두 번 하면 이미 통과한
-              것들이 거의 전부 재승인되기 때문입니다.
-            </p>
-          </div>
-          <div class="fact-grid">
-            <article class="fact">
-              <h3>텔레그램 한 항목의 형식</h3>
-              <p>
-                <strong>01. 제목</strong><br />[모델·제품 출시]<br /><br />핵심:
-                확인된 사실<br />왜 중요한가: 기술·산업적 의미<br />관련 대상:
-                직접 영향을 받는 구체적인 독자<br /><br />↳ 원문:
-                <a href="https://example.com">매체명</a>
-              </p>
-            </article>
-            <article class="fact">
-              <h3>메시지 길이 처리</h3>
-              <p>
-                텔레그램은 4,096자를 넘으면 거부합니다. 3,800자로 자르는 이유는
-                HTML 이스케이프 때문입니다. 작은따옴표 하나가
-                <code>&amp;#x27;</code> 6자가 되어 원문 3,900자가 실제로는
-                4,100자로 전송될 수 있습니다. 쪼개진 메시지에는 헤더 첫 줄 끝에
-                <code>[1/3]</code>이 붙습니다.
-              </p>
-            </article>
-          </div>
-        </section>
-
-        <section id="security" class="section" aria-labelledby="security-title">
-          <div class="section-heading">
-            <span class="section-index">06</span>
-            <div class="section-title">
-              <h2 id="security-title">보안과 배포</h2>
-              <p>
-                비밀값은 코드와 분리하고, GitHub Actions가 별도 서버 없이 예약
-                실행과 기록 보관을 담당합니다.
-              </p>
-            </div>
-          </div>
-          <ul class="checklist">
-            <li>
-              <strong>로컬 키 분리</strong
-              ><span><code>.env</code>는 Git에서 제외</span>
-            </li>
-            <li>
-              <strong>Actions Secrets</strong
-              ><span>Telegram 토큰·채팅 ID·Gemini 키</span>
-            </li>
-            <li>
-              <strong>저장소 쓰기 권한</strong
-              ><span>발송 기록 커밋을 위해 <code>contents: write</code></span>
-            </li>
-            <li>
-              <strong>발송 기록</strong
-              ><span><code>data/sent.jsonl</code>을 매 실행 후 커밋</span>
-            </li>
-            <li>
-              <strong>직렬 실행</strong
-              ><span>동일 브리핑의 중복 실행과 커밋 충돌 방지</span>
-            </li>
-            <li>
-              <strong>비공개 저장소</strong
-              ><span>월 2,000분 무료 한도 · 하루 6회 기준 약 400분</span>
-            </li>
-          </ul>
-          <figure class="diagram space-top-6">
-            <h3>배포 구조</h3>
-            <section
-              class="diagram-scroll"
-              aria-label="배포 구조 다이어그램"
-              tabindex="0"
-            >
-              <pre class="mermaid">
-flowchart TB
-  REPO[비공개 GitHub 저장소] --> ACTIONS[GitHub Actions\n하루 3회]
-  SECRETS[Actions Secrets\nTelegram · Gemini] --> ACTIONS
-  ACTIONS --> SOURCES[27개 공개 출처]
-  ACTIONS --> GEMINI[Gemini API]
-  ACTIONS --> TELEGRAM[개인 Telegram 채팅]
-  ACTIONS -->|발송 후 커밋| REPO</pre>
-            </section>
-            <p class="diagram-fallback">
-              텍스트 요약: 비공개 저장소의 Actions가 Secrets를 받아 27개 출처와
-              Gemini를 호출하고 개인 텔레그램으로 보낸 뒤, 발송 기록을 같은
-              저장소에 커밋합니다.
-            </p>
-            <figcaption>
-              기록을 Actions 캐시가 아닌 git에 두는 이유는 캐시가 7일 미사용이나
-              용량 초과로 사라지기 때문입니다. 사라지면 이미 보낸 항목이 전부
-              재발송됩니다.
-            </figcaption>
-          </figure>
-        </section>
-
-        <section id="threads" class="section" aria-labelledby="threads-title">
-          <div class="section-heading">
-            <span class="section-index">07</span>
-            <div class="section-title">
-              <h2 id="threads-title">Threads 지원 상태</h2>
-              <p>
-                공식 API로는 타인 계정을 수집할 수 없습니다. RSSHub를 경유해
-                RSS로 받고 있으며, 다른 출처와 동일하게 다룹니다.
-              </p>
-            </div>
-          </div>
-          <div class="fact-grid">
-            <article class="fact">
-              <span class="badge warning">공식 API 불가</span>
-              <h3 class="space-top-4">왜 심사를 통과할 수 없나</h3>
-              <p>
-                타인 공개 계정 조회에는
-                <code>threads_profile_discovery</code> 권한이 필요합니다.
-                Standard Access로는 <code>@meta</code>, <code>@threads</code>,
-                <code>@instagram</code>, <code>@facebook</code> 네 개만
-                조회되고, 그 외에는 Meta 앱 심사(2~4주, 실제 서비스의 사용자
-                플로우 스크린캐스트 제출)를 통과해야 합니다. 개인용 봇은 제출할
-                사용자 플로우가 없습니다.
-              </p>
-            </article>
-            <article class="fact">
-              <span class="badge success">RSSHub 경유</span>
-              <h3 class="space-top-4">현재 방식</h3>
-              <p>
-                <code>rsshub.rssforever.com/threads/choi.openai</code>를 RSS로
-                읽습니다. 토큰도, 60일 갱신도, 심사도 필요 없습니다. 대신 공용
-                인스턴스라 자주 타임아웃되며, 실패하면 그날 이 출처만 빠지고
-                브리핑은 정상 발송됩니다.
-              </p>
-            </article>
-          </div>
-          <div class="callout warning" role="note">
-            <h3>남아 있는 코드</h3>
-            <p>
-              <code>ai_trend_bot/threads.py</code>는 본인 계정 조회를 위해
-              남겨두었습니다. 이 경로는 <code>threads_basic</code>만으로
-              동작하지만 현재 파이프라인에서는 호출하지 않습니다. 안정성이
-              필요해지면 RSSHub를 직접 띄우는 것이 다음 선택지입니다.
-            </p>
-          </div>
-        </section>
-
-        <section
-          id="operation"
-          class="section"
-          aria-labelledby="operation-title"
-        >
-          <div class="section-heading">
-            <span class="section-index">08</span>
-            <div class="section-title">
-              <h2 id="operation-title">운영과 점검 방법</h2>
-              <p>
-                브리핑이 마음에 안 들면 코드가 아니라
-                <code>config/editorial.md</code>를 고칩니다. 한국어 산문으로 쓰인
-                편집 방침이 그대로 선별 프롬프트에 들어갑니다.
-              </p>
-            </div>
-          </div>
-          <div class="code-grid">
-            <div class="code-block">
-              <h3>기준을 고친 뒤 확인</h3>
-              <pre tabindex="0" aria-label="로컬 점검 명령어"><code>uv sync
-uv run ai-trend-bot check-config
-uv run ai-trend-bot run --dry-run</code></pre>
-            </div>
-            <div class="code-block">
-              <h3>실제 텔레그램 발송</h3>
-              <pre tabindex="0" aria-label="실제 텔레그램 발송 명령어"><code>uv run ai-trend-bot run --send</code></pre>
-            </div>
-          </div>
-          <p class="space-top-4">
-            드라이런은 무엇이 왜 걸러졌는지 사유와 함께 보여줍니다
-            (<code>--show-dropped</code>, 기본 켜짐). 기준이 느슨하다고 느끼면
-            편집 방침의 &ldquo;반드시 걸러낼 것&rdquo;에 항목을 추가하고, 중요한
-            걸 놓치면 &ldquo;반드시 통과시킬 것&rdquo;에 추가합니다.
+      <section class="editorial wrap" aria-labelledby="editorial-title">
+        <div class="editorial-intro">
+          <h2 id="editorial-title">무엇을 남기고,<br />무엇을 거르나요?</h2>
+          <p>
+            편집 기준은 AI를 실제로 만들고 쓰는 독자에게 맞춰져 있습니다. 도구
+            탐색, 업계 흐름, 글감, 중요한 발표를 함께 봅니다.
           </p>
-          <h3 class="space-top-8">저장소 구조</h3>
-          <pre class="repo-tree" tabindex="0" aria-label="저장소 구조">
-ai-trend-bot/
-├── ai_trend_bot/
-│   ├── feeds.py           ① 수집 · RSS/HN/HF 어댑터
-│   ├── triage.py          ② 선별 · 분류·병합·순위
-│   ├── enrich.py          ③ 심화 · 원문 본문 추출
-│   ├── telegram.py        ④ 전달 · 렌더링·분할·발송
-│   ├── gemini.py          LLM 호출 (선별·요약)
-│   └── store.py           발송 기록 읽기·쓰기
-├── config/sources.toml    27개 출처 정의
-├── config/editorial.md    편집 기준 (여기를 고칩니다)
-├── data/sent.jsonl        발송 기록 · 자동 커밋
-├── tests/                 자동 테스트
-├── .github/workflows/     예약 실행 정의
-├── docs/                  이 개요 문서와 설계 스펙
-└── README.md              실행 안내</pre>
-          <section
-            class="table-wrap space-top-6"
-            aria-label="최근 검증 기준 표"
-            tabindex="0"
-          >
-            <table>
-              <caption>
-                최근 검증 기준
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">검사</th>
-                  <th scope="col">기대 결과</th>
-                  <th scope="col">보호 범위</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>pytest</td>
-                  <td>21개 테스트 통과</td>
-                  <td>설정·수집·선별·요약·기록·렌더링·CLI</td>
-                </tr>
-                <tr>
-                  <td>Ruff</td>
-                  <td>린트 통과</td>
-                  <td>코드 스타일과 잠재 오류</td>
-                </tr>
-                <tr>
-                  <td>basedpyright</td>
-                  <td>타입 오류 0건</td>
-                  <td>엄격한 Python 타입 안정성</td>
-                </tr>
-                <tr>
-                  <td>GitHub Actions</td>
-                  <td>수동 실행 성공</td>
-                  <td>발송과 기록 커밋·푸시까지 검증됨</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-        </section>
+          <a
+            class="text-link"
+            href="https://github.com/jaymunsh/ai-trend-bot/blob/main/config/editorial.md"
+            >편집 기준 전문
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 18 18 6M6 6h12v12" /></svg
+          ></a>
+        </div>
+        <div class="editorial-rules">
+          <div class="rule-column">
+            <h3>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m5 12 4 4L19 6" /></svg
+              >남기는 소식
+            </h3>
+            <ul>
+              <li>새 모델·제품 공개와 실제 사양 변화</li>
+              <li>API 변경, 지원 종료, 중요한 도구 업데이트</li>
+              <li>실무 판단을 바꾸는 구체적인 연구 결과</li>
+              <li>규제·소송·대형 투자·인수</li>
+              <li>장애·사고·보안 문제</li>
+            </ul>
+          </div>
+          <div class="rule-column">
+            <h3>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14" /></svg
+              >거르는 소식
+            </h3>
+            <ul>
+              <li>새 소식이 없는 튜토리얼·사용법</li>
+              <li>고객 사례·파트너십 홍보</li>
+              <li>이미 알려진 내용의 재정리</li>
+              <li>행사 안내·채용·사소한 리브랜딩</li>
+              <li>구체적인 결과 없는 전망·의견</li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
-        <section id="risks" class="section" aria-labelledby="risks-title">
-          <div class="section-heading">
-            <span class="section-index">09</span>
-            <div class="section-title">
-              <h2 id="risks-title">제약과 다음 단계</h2>
+      <section
+        id="operation"
+        class="operation"
+        aria-labelledby="operation-title"
+      >
+        <div class="wrap">
+          <div class="operation-heading">
+            <h2 id="operation-title">하루 세 번,<br />정해진 시간에.</h2>
+            <p>
+              07:15·13:15·19:15에 수집과 요약을 시작합니다.<br />준비된 브리핑은 메모리에서 기다렸다가 아래 시각에 보냅니다.
+            </p>
+          </div>
+          <ol class="schedule" aria-label="정규 발송 시각, 한국 표준시">
+            <li><span>아침</span><time datetime="07:30">07:30</time></li>
+            <li><span>점심</span><time datetime="13:30">13:30</time></li>
+            <li><span>저녁</span><time datetime="19:30">19:30</time></li>
+          </ol>
+          <div class="operation-caption">
+            <span>Asia/Seoul · KST</span
+            ><span>발송 15분 전 준비 · 준비가 늦게 끝나면 즉시 발송</span>
+          </div>
+          <div class="runtime-flow" aria-label="운영 구성">
+            <div><span>코드 업데이트</span><strong>GitHub</strong></div>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+            <div><span>수집 · 선별 · 요약</span><strong>miniPC</strong></div>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+            <div><span>브리핑 전달</span><strong>Telegram</strong></div>
+          </div>
+          <div class="operation-notes">
+            <p>
+              <strong>발송 기록은 월별로 보관합니다.</strong> 이번 달은 sent.jsonl, 지난달은
+              archive/until_YYYY-MM-DD.jsonl에 남깁니다. 삭제 없이 이전 기록도 중복 검사에
+              사용합니다. 준비한 기사 목록은 파일로 저장하지 않습니다.
+            </p>
+            <p>
+              <strong>Actions는 수동 대체 실행.</strong> 정기 실행은 하지
+              않습니다. 저장소의 오래된 기록을 사용하므로 수동 실행에서는 중복이
+              발생할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="next" class="section wrap" aria-labelledby="next-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="next-title">이번에 반영한 개선</h2>
+            <p>수집량보다 새 사실과 읽는 시간을 먼저 봅니다.</p>
+          </div>
+          <span class="section-meta">코드 반영 · 운영 설정 별도 갱신</span>
+        </div>
+        <ol class="roadmap">
+          <li>
+            <div>
+              <h3>최신 소식을 더 정확하게</h3>
               <p>
-                개인용 무료 운영에는 충분하지만, 외부 서비스의
-                정책·형식·할당량에 영향을 받습니다.
+                최근 48시간을 기준으로 추립니다. Hacker News는 AI·LLM·OpenAI·Anthropic을
+                최신순으로 개별 검색하고, GeekNews와 AI 전문·주요 매체를 더했습니다.
               </p>
             </div>
-          </div>
-          <div class="risk-grid">
-            <details open>
-              <summary>발송량이 회차마다 흔들림</summary>
+            <span>반영</span>
+          </li>
+          <li>
+            <div>
+              <h3>미처리 기사가 먼저 들어오도록</h3>
               <p>
-                실측 7건 · 14건 · 30건. 2차를 선별로 프레이밍해 최악(상한 도달)은
-                잡았지만 LLM 판단이라 편차가 남습니다. 계속 많으면 편집 방침을
-                조입니다.
+                이미 보낸 URL과 오래된 기사를 먼저 제외한 뒤 출처별 상한을 적용합니다.
+                신규 기사가 기존 글에 밀리지 않도록 최신순으로 고릅니다.
               </p>
-            </details>
-            <details>
-              <summary>Gemini 요청 크기 한계</summary>
+            </div>
+            <span>반영</span>
+          </li>
+          <li>
+            <div>
+              <h3>반복 보도는 묶고, 새 변화는 남기도록</h3>
               <p>
-                무료 티어는 후보 300건대를 한 요청으로 받으면 503을 반환합니다.
-                100건씩 배치로 나눠 우회하고 있으며, 일시적 5xx·429는 5초 →
-                20초 → 60초로 재시도합니다.
+                같은 사건의 단순 반복은 병합하고 출처 URL을 내부에 보존합니다. 가격·일정·조치처럼
+                새 사실이 있는 후속 보도와 다른 회사의 별개 발표는 남길 수 있습니다.
               </p>
-            </details>
-            <details>
-              <summary>RSSHub 공용 인스턴스 불안정</summary>
+            </div>
+            <span>반영</span>
+          </li>
+          <li>
+            <div>
+              <h3>더 짧고 구체적인 브리핑</h3>
               <p>
-                Threads 수집이 자주 타임아웃됩니다. 실패해도 그 출처만 빠집니다.
-                안정성이 필요하면 직접 띄우는 것이 해법입니다.
+                굵은 제목과 모바일 2~3줄 목표의 핵심 요약, 대표 원문 링크와 외 N곳으로 전달합니다. 최대 50건까지
+                허용하지만 기준에 맞는 소식이 없으면 보내지 않습니다.
               </p>
-            </details>
-            <details>
-              <summary>Anthropic · Meta AI 커버리지 공백</summary>
-              <p>
-                두 회사는 RSS를 제공하지 않아 직접 수집이 불가능합니다. 소식이
-                테크 미디어 경유로만 들어와 하루 정도 늦을 수 있습니다.
-              </p>
-            </details>
-            <details>
-              <summary>예약 실행이 몇 분 늦을 수 있음</summary>
-              <p>
-                GitHub Actions cron은 정확한 실시간 스케줄러가 아닙니다. 5~15분
-                지연은 정상 동작입니다.
-              </p>
-            </details>
-            <details>
-              <summary>다음으로 해볼 개선</summary>
-              <p>
-                편집 방침 실사용 튜닝, 실패 알림, 주간 회고 브리핑, 90일 초과
-                기록 정리 순으로 확장하면 운영 가치가 큽니다.
-              </p>
-            </details>
-          </div>
-          <div class="callout success" role="note">
-            <h3>현재 결론</h3>
-            <p>
-              추가 서버 없이 무료 한도 안에서 돌고 있습니다. 남은 과제는 기능이
-              아니라 <strong>편집 기준의 튜닝</strong>입니다. 며칠 받아보며
-              <code>config/editorial.md</code>를 조정하는 것이 가장 효과가 큽니다.
-            </p>
-          </div>
-        </section>
+            </div>
+            <span>반영</span>
+          </li>
+        </ol>
+      </section>
 
-        <footer class="footer">
-          <div class="footer-inner">
+      <section class="faq-section wrap" aria-labelledby="faq-title">
+        <h2 id="faq-title">조금 더 알아보기</h2>
+        <div class="faq-list">
+          <details>
+            <summary>
+              기사가 몇 개씩 오나요? <span aria-hidden="true">+</span>
+            </summary>
             <p>
-              이 문서는 저장소의 실제 설정과 구현을 기준으로 작성되었습니다.<br />설계
-              배경과 결정 근거는 <code>docs/superpowers/specs/</code>의 설계
-              문서에 있습니다.
+              발송량은 가변입니다. 조용한 회차는 0건일 수 있고, 중요한 사건이
+              많은 날은 더 많이 보냅니다. 정규 실행의 상한 50건은 목표치가
+              아니라 폭주 방지선입니다.
             </p>
-            <a href="https://github.com/jaymunsh/ai-trend-bot"
-              >GitHub 저장소 보기</a
-            >
-          </div>
-        </footer>
-      </main>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script>
-      const printButton = document.querySelector("[data-print]");
-      printButton?.addEventListener("click", () => window.print());
-      const links = [...document.querySelectorAll(".toc a")];
-      const sections = [...document.querySelectorAll("main section[id]")];
-      if ("IntersectionObserver" in window) {
-        const observer = new IntersectionObserver(
-          (entries) => {
-            for (const entry of entries) {
-              if (entry.isIntersecting) {
-                for (const link of links) {
-                  link.setAttribute(
-                    "aria-current",
-                    String(link.getAttribute("href") === "#" + entry.target.id),
-                  );
-                }
-              }
-            }
-          },
-          { rootMargin: "-20% 0px -65% 0px" },
-        );
-        for (const section of sections) observer.observe(section);
-      }
-      if (window.mermaid) {
-        const rootStyles = getComputedStyle(document.documentElement);
-        const token = (name) => rootStyles.getPropertyValue(name).trim();
-        window.mermaid.initialize({
-          startOnLoad: true,
-          securityLevel: "strict",
-          theme: "base",
-          themeVariables: {
-            fontFamily: token("--font-sans"),
-            primaryColor: token("--accent-soft"),
-            primaryTextColor: token("--text-primary"),
-            primaryBorderColor: token("--accent-primary"),
-            lineColor: token("--text-secondary"),
-            secondaryColor: token("--surface-secondary"),
-            tertiaryColor: token("--surface-primary"),
-            noteBkgColor: token("--status-warning-soft"),
-            noteTextColor: token("--text-primary"),
-            noteBorderColor: token("--status-warning"),
-          },
-          flowchart: { curve: "linear", htmlLabels: true },
-          sequence: { mirrorActors: false },
-        });
-      }
-    </script>
+          </details>
+          <details>
+            <summary>
+              요약은 무엇을 보고 만드나요? <span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              선별한 기사의 본문을 trafilatura로 추출해 Gemini에 전달합니다.
+              실패하면 RSS 티저로 요약합니다. 현재 모델 기본값은
+              gemini-3.1-flash-lite이며, 원문 링크를 함께 제공합니다. 요약은
+              원문을 대체하는 사실 검증 결과가 아닙니다.
+            </p>
+          </details>
+          <details>
+            <summary>
+              이미 보낸 소식은 어떻게 구분하나요?
+              <span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              발송한 URL의 해시로 같은 기사를 제외합니다. URL이 다른 반복 보도는
+              최근 14일에 보낸 사건 요지를 참고해 Gemini가 판정합니다. 병합한 기사의
+              출처 URL은 내부 기록에 보존하고 알림에는 대표 링크 하나와 외 N곳을 표시합니다.
+              중요한 새 사실이 있는 후속 보도는 남길 수 있으며,
+              모든 사건 중복을 완벽하게 막는 방식은 아닙니다.
+            </p>
+          </details>
+          <details>
+            <summary>
+              수집이나 실행이 실패하면 어떻게 되나요?
+              <span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              피드 실패는 해당 출처만 건너뜁니다. Gemini의 일시적인 429·5xx
+              응답은 재시도합니다. miniPC가 내려가거나 모델 요청이 끝내 실패하면
+              그 회차는 전달되지 않습니다. 다음 회차에서 피드에 남아 있는 최근 48시간의 미발송
+              항목을 다시 후보로 봅니다. 정시까지 준비가 끝나지 않으면 완료 직후 보냅니다.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Threads도 수집하나요? <span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              공식 Threads API 경로는 비활성화되어 있습니다. 현재는 RSSHub를
+              경유하는 @choi.openai 피드 하나가 RSS 수집처에 포함되어 있습니다.
+              외부 RSSHub의 상태와 형식에 영향을 받으며 현재 조회가 실패하고 있습니다.
+              별도 서버를 추가해 복구하지 않고, 실패한 회차에는 해당 출처만 건너뜁니다.
+            </p>
+          </details>
+          <details>
+            <summary>
+              GitHub Pages에서 봇도 실행되나요?
+              <span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              GitHub Pages에는 이 정적 소개 페이지를 올릴 계획입니다. 기사
+              수집과 Telegram 발송은 miniPC의 Python 프로그램이 담당합니다. 소개
+              페이지에는 API 키나 운영 상태 파일을 포함하지 않습니다.
+            </p>
+          </details>
+          <details>
+            <summary>
+              운영 방법과 구현 코드는 어디서 보나요?
+              <span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              <a href="https://github.com/jaymunsh/ai-trend-bot">저장소</a>와
+              <a
+                href="https://github.com/jaymunsh/ai-trend-bot/blob/main/README.md"
+                >README</a
+              >에 설정, 실행, 장애 점검 방법이 정리되어 있습니다.
+              <code>uv run ai-trend-bot run --dry-run</code>으로 실제 발송 없이
+              선별 결과를 확인할 수 있습니다.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="brand" href="#main"><span>AI TREND BOT</span></a>
+      <p>AI 소식을 모으고, 고르고, 전합니다.</p>
+      <div>
+        <span>설정·코드 기준 · 2026.10.04</span
+        ><button type="button" class="print-button" data-print>
+          문서로 인쇄
+        </button>
+      </div>
+    </footer>
   </body>
 </html>

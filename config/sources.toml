@@ -141,7 +141,7 @@ max_items = 5
 
 [[feeds]]
 name = "Hacker News (AI)"
-url = "https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points%3E150&query=AI%20OR%20LLM%20OR%20OpenAI%20OR%20Anthropic&hitsPerPage=20"
+url = "https://hn.algolia.com/api/v1/search_by_date"
 category = "community"
 kind = "hn"
 max_items = 20
@@ -209,3 +209,21 @@ name = "Threads @choi.openai"
 url = "https://rsshub.rssforever.com/threads/choi.openai"
 category = "community"
 max_items = 10
+
+[[feeds]]
+name = "GeekNews"
+url = "https://news.hada.io/rss/news"
+category = "community"
+max_items = 50
+
+[[feeds]]
+name = "The Decoder"
+url = "https://the-decoder.com/feed/"
+category = "community"
+max_items = 10
+
+[[feeds]]
+name = "The Guardian AI"
+url = "https://www.theguardian.com/technology/artificialintelligenceai/rss"
+category = "community"
+max_items = 15
